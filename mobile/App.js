@@ -621,6 +621,8 @@ function ScannerScreen({
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraReady, setCameraReady] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [cameraSize, setCameraSize] = useState(null);
+  const [cameraKey, setCameraKey] = useState(0);
   const [phase, setPhase] = useState("camera");
   const [capturedUri, setUri] = useState(null);
   const [result, setResult] = useState(null);
@@ -1009,10 +1011,14 @@ function ScannerScreen({
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <CameraView
+    <View collapsable={false} style={{ flex: 1, backgroundColor: "#000" }} onLayout={({nativeEvent: {layout}}) => {
+      if (layout.width > 0 && layout.height > 0) setCameraSize(previous => previous?.width === layout.width && previous?.height === layout.height ? previous : {width: layout.width, height: layout.height});
+    }}>
+      {cameraSize && <CameraView
+        key={cameraKey}
         ref={cameraRef}
-        style={StyleSheet.absoluteFillObject}
+        style={{width: cameraSize.width, height: cameraSize.height}}
+        mode="picture"
         facing="back"
         onCameraReady={() => setCameraReady(true)}
         onMountError={({ message }) => {
@@ -1020,7 +1026,7 @@ function ScannerScreen({
           setErrMsg("Impossible de démarrer la caméra : " + message);
           setPhase("error");
         }}
-      />
+      />}
 
       {/* ── Indicateur scans restants + bouton Premium ── */}
       <View
@@ -1144,6 +1150,9 @@ function ScannerScreen({
 
       {/* Bouton déclencheur */}
       <View style={s2.shutterArea}>
+        <TouchableOpacity disabled={capturing} accessibilityRole="button" onPress={() => {setCameraReady(false); setCameraKey(value => value + 1);}} style={{padding:12,marginBottom:12,backgroundColor:"#000000aa",borderRadius:12}}>
+          <Text style={{color:"#fff",fontSize:14}}>Relancer l’aperçu</Text>
+        </TouchableOpacity>
         <Text
           style={{
             color: "rgba(255,255,255,0.5)",
