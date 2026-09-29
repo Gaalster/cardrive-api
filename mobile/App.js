@@ -619,6 +619,8 @@ function ScannerScreen({
   onConsumeFuel,
 }) {
   const [permission, requestPermission] = useCameraPermissions();
+  const [cameraReady, setCameraReady] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [phase, setPhase] = useState("camera");
   const [capturedUri, setUri] = useState(null);
   const [result, setResult] = useState(null);
@@ -650,25 +652,28 @@ function ScannerScreen({
       setPhase("error");
     } finally {
       shooting.current = false;
+      setCapturing(false);
     }
   };
 
   const shoot = async () => {
-    if (!cameraRef.current || shooting.current || (!isPremium && fuel <= 0))
+    if (!cameraRef.current || !cameraReady || shooting.current || (!isPremium && fuel <= 0))
       return;
     shooting.current = true;
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
         () => {},
       );
-      setPhase("scanning"); // passe en scanning dès le départ pour éviter double appui
+      setCapturing(true); // Keep CameraView mounted until capture finishes.
 
-      // skipProcessing accélère la capture sur Android
+      // Native processing preserves orientation on Android.
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.5,
-        skipProcessing: true,
+        skipProcessing: false,
       });
       if (!photo?.uri) throw new Error("Aucune photo retournée par la caméra");
+      setCameraReady(false);
+      setPhase("scanning");
 
       const resized = await ImageManipulator.manipulateAsync(
         photo.uri,
@@ -727,10 +732,12 @@ function ScannerScreen({
       ).catch(() => {});
     } finally {
       shooting.current = false;
+      setCapturing(false);
     }
   };
 
   const reset = () => {
+    setCameraReady(false);
     setPhase("camera");
     setUri(null);
     setResult(null);
@@ -776,9 +783,9 @@ function ScannerScreen({
             ? "La caméra est testée localement. La photo ne sera pas analysée et le modèle sera fictif."
             : "La photo est transmise à notre serveur et au service IA pour identifier le véhicule."}
         </Text>
-        <TouchableOpacity style={s2.permBtn} onPress={requestPermission}>
+        <TouchableOpacity style={s2.permBtn} onPress={() => permission?.canAskAgain === false ? Linking.openSettings() : requestPermission()}>
           <Text style={[s2.permBtnText, { color: C.accent }]}>
-            Autoriser la caméra
+            {permission?.canAskAgain === false ? "Ouvrir les paramètres caméra" : "Autoriser la caméra"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1007,6 +1014,12 @@ function ScannerScreen({
         ref={cameraRef}
         style={StyleSheet.absoluteFillObject}
         facing="back"
+        onCameraReady={() => setCameraReady(true)}
+        onMountError={({ message }) => {
+          setCameraReady(false);
+          setErrMsg("Impossible de démarrer la caméra : " + message);
+          setPhase("error");
+        }}
       />
 
       {/* ── Indicateur scans restants + bouton Premium ── */}
@@ -1140,7 +1153,7 @@ function ScannerScreen({
         >
           Vise le véhicule et appuie
         </Text>
-        <TouchableOpacity onPress={shoot} style={s2.shutterOuter}>
+        <TouchableOpacity accessibilityLabel={capturing ? "Photo en cours" : cameraReady ? "Prendre une photo" : "Caméra en préparation"} disabled={!cameraReady || capturing} onPress={shoot} style={[s2.shutterOuter, {opacity: cameraReady && !capturing ? 1 : 0.4}]}>
           <View style={s2.shutterInner} />
         </TouchableOpacity>
       </View>
