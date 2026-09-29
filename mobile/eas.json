@@ -1,0 +1,27 @@
+{
+  "cli": {
+    "version": ">=16.0.0"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_DEMO_MODE": "true",
+        "EXPO_PUBLIC_ENABLE_NATIVE_CHECKOUT": "false"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_DEMO_MODE": "false",
+        "EXPO_PUBLIC_ENABLE_NATIVE_CHECKOUT": "false"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  }
+}
