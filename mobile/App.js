@@ -1,3 +1,4 @@
+import { AdsPanel } from "./src/AdsPanel";
 import { keepPhoto } from "./src/photos";
 import { DEMO_MODE } from "./src/config";
 /**
@@ -2597,6 +2598,8 @@ function AppInner() {
     credits: 0,
   });
   const [accountError, setAccountError] = useState("");
+  const [accountState, setAccountState] = useState("loading");
+  const [authMode, setAuthMode] = useState("register");
   const playerRef = useRef(null);
   playerRef.current = player;
 
@@ -2610,9 +2613,11 @@ function AppInner() {
       const value = await api("/me");
       applyEntitlements(value);
       setAccountError("");
+      setAccountState("connected");
       return value;
     } catch (error) {
       applyEntitlements({ isPremium: false, remaining: 0, credits: 0 });
+      setAccountState(error.status === 401 ? "guest" : "error");
       setAccountError(error.message);
       throw error;
     }
@@ -2870,7 +2875,7 @@ function AppInner() {
         </View>
       )}
       <TouchableOpacity accessibilityRole="link" accessibilityLabel="Support Gaalster, ouvre le navigateur" onPress={() => Linking.openURL("https://cardrive-tcg-demo.kiki2823.chatgpt.site/support").catch(() => Alert.alert("Support", "Impossible d’ouvrir le navigateur."))} style={{padding:12,backgroundColor:C.surface}}><Text style={{color:C.accent,textAlign:"center",fontSize:14}}>Gaalster · Support (navigateur)</Text></TouchableOpacity>
-      {!!accountError && (
+      {!!accountError && accountState !== "guest" && (
         <TouchableOpacity
           onPress={() => setTab("shop")}
           style={{ padding: 10, backgroundColor: C.surface }}
@@ -2884,16 +2889,28 @@ function AppInner() {
         <View style={{flex: 1, backgroundColor: "#000b", justifyContent: "center", padding: 24}}>
           <View accessibilityViewIsModal style={{backgroundColor: "#151526", borderRadius: 20, padding: 24, gap: 16}}>
             <Text accessibilityRole="header" style={{color: C.accent, fontSize: 24, fontWeight: "800"}}>Tu as utilisé ton dernier crédit</Text>
-            <Text style={{color: "#fff", fontSize: 16}}>Il te reste 0 crédit. Recharge pour continuer à scanner des voitures.</Text>
+            <Text style={{color: "#fff", fontSize: 16}}>Tes scans gratuits reviennent à minuit (heure de Paris). Consulte ton compte pour les autres possibilités.</Text>
             {DEMO_MODE && <Text style={{color: C.muted, fontSize: 14}}>Crédits de démonstration : cette recharge est fictive.</Text>}
-            <Btn label="Recharger mes crédits" onPress={() => {setRechargeOpen(false); setTab("shop");}} />
+            <Btn label="Voir mes options" onPress={() => {setRechargeOpen(false); setTab("shop");}} />
             <Btn label="Plus tard" outline onPress={() => setRechargeOpen(false)} />
           </View>
         </View>
       </Modal>
       {/* Screens */}
       <View style={{ flex: 1 }}>
-        {tab === "scan" && (
+        {tab === "scan" && !DEMO_MODE && accountState !== "connected" && (
+          <View style={{flex:1,justifyContent:"center",padding:28,backgroundColor:C.bg,gap:18}}>
+            <Text style={{color:C.accent,fontSize:12,fontWeight:"800",letterSpacing:3}}>TON GARAGE COMMENCE ICI</Text>
+            <Text accessibilityRole="header" style={{color:"#fff",fontSize:32,fontWeight:"900"}}>Chaque voiture a une histoire. Collectionne-la.</Text>
+            <Text style={{color:C.muted,fontSize:16,lineHeight:24}}>{accountState === "loading" ? "Connexion à ton compte…" : accountState === "error" ? "Impossible de vérifier ton compte. Vérifie ta connexion et réessaie." : "Crée ton compte gratuit pour identifier les voitures et obtenir 5 scans par jour, renouvelés à minuit (heure de Paris)."}</Text>
+            {accountState === "guest" ? <>
+              <Btn label="Créer mon compte gratuit" onPress={() => {setAuthMode("register");setTab("shop");}} />
+              <Btn label="J’ai déjà un compte" outline onPress={() => {setAuthMode("login");setTab("shop");}} />
+              <Text style={{color:C.muted,fontSize:12}}>Aucune carte bancaire nécessaire · Ton garage reste sur cet appareil</Text>
+            </> : <Btn label="Réessayer la connexion" onPress={() => refreshAccount().catch(() => {})} />}
+          </View>
+        )}
+        {tab === "scan" && (DEMO_MODE || accountState === "connected") && (
           <ScannerScreen
             onCarFound={addCar}
             fuel={fuel}
@@ -2903,7 +2920,7 @@ function AppInner() {
           />
         )}
         {tab === "shop" && (
-          <ShopScreen entitlements={entitlements} onRefresh={refreshAccount} />
+          <ShopScreen initialMode={authMode} onAuthenticated={() => setTab("scan")} entitlements={entitlements} onRefresh={refreshAccount} />
         )}
         {tab === "garage" && <GarageScreen player={player} />}
         {tab === "challenge" && (
@@ -2914,6 +2931,7 @@ function AppInner() {
         )}
       </View>
 
+      {!DEMO_MODE && accountState === "connected" && !entitlements.isPremium && tab !== "scan" && <AdsPanel />}
       {/* Bottom nav — respecte la barre de navigation Android et le home indicator iOS */}
       <View
         style={{

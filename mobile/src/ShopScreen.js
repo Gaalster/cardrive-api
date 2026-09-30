@@ -1,3 +1,4 @@
+import { AdsPanel } from "./AdsPanel";
 import { DEMO_MODE } from "./config";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -22,13 +23,13 @@ const money = (product) =>
     currency: product.currency,
   }).format(product.amount / 100);
 
-export function ShopScreen({ entitlements, onRefresh }) {
+export function ShopScreen({ entitlements, onRefresh, initialMode = "register", onAuthenticated }) {
   const [products, setProducts] = useState([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [register, setRegister] = useState(false);
+  const [register, setRegister] = useState(initialMode === "register");
   const lock = useRef(false);
   const connected = Boolean(entitlements.email);
 
@@ -74,7 +75,8 @@ export function ShopScreen({ entitlements, onRefresh }) {
       await setToken(data.token);
       setPassword("");
       await onRefresh();
-      setMessage("Compte connecté. Tes achats sont associés à ce compte.");
+      setMessage("Compte connecté. Tu peux commencer à scanner.");
+      onAuthenticated?.();
     });
 
   const openPayment = (product) =>
@@ -127,10 +129,10 @@ export function ShopScreen({ entitlements, onRefresh }) {
             </Text>
             <Text style={styles.description}>
               {entitlements.freeRemaining || 0}/5 gratuits aujourd’hui ·{" "}
-              {entitlements.credits || 0} scans achetés en réserve
+              {entitlements.credits || 0} scans bonus ou achetés en réserve
             </Text>
             <Action
-              label="Actualiser mes achats"
+              label="Actualiser mon solde"
               disabled={busy}
               onPress={() =>
                 run(async () => {
@@ -234,6 +236,7 @@ export function ShopScreen({ entitlements, onRefresh }) {
           Les achats dans cette version mobile ne sont pas encore disponibles.
         </Text>
       )}
+      {connected && !entitlements.isPremium && !DEMO_MODE && <AdsPanel reward onRefresh={onRefresh} />}
       {["payment", "subscription"].map((mode) => (
         <View key={mode}>
           <Text style={styles.section}>

@@ -47,7 +47,9 @@ export async function api(path, body) {
     const data = await response.json();
     if (!response.ok) {
       if (response.status === 401) await setToken(null);
-      throw new Error(data.error || "Le serveur est indisponible");
+      const error = new Error(data.error || "Le serveur est indisponible");
+      error.status = response.status;
+      throw error;
     }
     return data;
   } catch (error) {

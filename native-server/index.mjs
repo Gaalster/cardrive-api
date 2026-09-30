@@ -1,4 +1,5 @@
 import http from "node:http";
+import { createAds } from "./ads.mjs";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -14,6 +15,7 @@ export function createApplication({
   publicUrl = process.env.PUBLIC_URL || "http://localhost:4242",
 }) {
   const billing = createBilling(stripe, store, publicUrl.replace(/\/$/, ""));
+  const ads = createAds(store);
   const locks = new Set();
   const limits = new Map();
   const allowedOrigins = (
@@ -86,6 +88,7 @@ export function createApplication({
       }
       if (["/checkout", "/portal", "/webhooks/stripe"].includes(path) && process.env.ENABLE_PAYMENTS !== "true")
         throw fail(503, "Achats désactivés pendant la bêta connectée.");
+      if (req.method === "GET" && path === "/ads/ssv") return send(200, await ads.callback(req.url));
       let raw = Buffer.alloc(0);
       if (req.method === "POST") {
         const chunks = [];
@@ -141,6 +144,10 @@ export function createApplication({
       }
       const token = req.headers.authorization?.replace(/^Bearer /, "") || "";
       const id = store.authenticate(token);
+      if (req.method === "POST" && path === "/ads/ticket") {
+        rateLimit(`ads:${id}`, 10, 60000);
+        return send(200, ads.ticket(id));
+      }
       if (req.method === "POST" && path === "/auth/logout") {
         store.logout(token);
         return send(200, { ok: true });

@@ -27,11 +27,19 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "CarDrive utilise la caméra pour photographier les véhicules.",
+          "cameraPermission": "CarDrive utilise la cam\u00e9ra pour photographier les v\u00e9hicules.",
           "recordAudioAndroid": false
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "delayAppMeasurementInit": true
+        }
+      ]
     ],
     "extra": {
       "eas": {
