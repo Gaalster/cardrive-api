@@ -2585,7 +2585,7 @@ function OnboardingScreen({ onDone }) {
 ══════════════════════════════════════════════════ */
 function AppInner() {
   const [player, setPlayer] = useState(null);
-  const [tab, setTab] = useState("scan");
+  const [tab, setTab] = useState("home");
   const [rechargeOpen, setRechargeOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [challengePopup, setPopup] = useState(null);
@@ -2773,13 +2773,16 @@ function AppInner() {
           backgroundColor="transparent"
           translucent
         />
-        <OnboardingScreen onDone={createPlayer} />
+        {!DEMO_MODE && accountState !== "connected" ? (
+          <ShopScreen accountOnly initialMode="register" entitlements={entitlements} onRefresh={refreshAccount} />
+        ) : <OnboardingScreen onDone={createPlayer} />}
       </View>
     );
 
   const score = totalScore(player);
 
   const TABS = [
+    { id: "home", icon: "⌂", label: "Accueil" },
     { id: "scan", icon: "📷", label: "Scanner" },
     {
       id: "garage",
@@ -2877,7 +2880,7 @@ function AppInner() {
       <TouchableOpacity accessibilityRole="link" accessibilityLabel="Support Gaalster, ouvre le navigateur" onPress={() => Linking.openURL("https://cardrive-tcg-demo.kiki2823.chatgpt.site/support").catch(() => Alert.alert("Support", "Impossible d’ouvrir le navigateur."))} style={{padding:12,backgroundColor:C.surface}}><Text style={{color:C.accent,textAlign:"center",fontSize:14}}>Gaalster · Support (navigateur)</Text></TouchableOpacity>
       {!!accountError && accountState !== "guest" && (
         <TouchableOpacity
-          onPress={() => setTab("shop")}
+          onPress={() => setTab("home")}
           style={{ padding: 10, backgroundColor: C.surface }}
         >
           <Text style={{ color: C.accent, textAlign: "center" }}>
@@ -2898,14 +2901,23 @@ function AppInner() {
       </Modal>
       {/* Screens */}
       <View style={{ flex: 1 }}>
+        {tab === "home" && <View style={{flex:1}}>
+          <View style={{paddingHorizontal:22,paddingTop:16,paddingBottom:12,gap:8}}>
+            <Text accessibilityRole="header" style={{color:"#fff",fontSize:26,fontWeight:"900"}}>{accountState === "connected" ? `Bienvenue, ${player.name}` : "Bienvenue dans CarDrive"}</Text>
+            <Text style={{color:C.muted,fontSize:14,lineHeight:21}}>{accountState === "connected" ? "Ton compte et tes scans, au même endroit." : "Crée ton compte ou connecte-toi ici pour profiter de 5 scans gratuits par jour."}</Text>
+            {(DEMO_MODE || accountState === "connected") && <Btn label="Photographier une voiture" onPress={() => setTab("scan")} />}
+          </View>
+          <ShopScreen key={authMode} accountOnly initialMode={authMode} entitlements={entitlements} onRefresh={refreshAccount} />
+        </View>}
+
         {tab === "scan" && !DEMO_MODE && accountState !== "connected" && (
           <View style={{flex:1,justifyContent:"center",padding:28,backgroundColor:C.bg,gap:18}}>
             <Text style={{color:C.accent,fontSize:12,fontWeight:"800",letterSpacing:3}}>TON GARAGE COMMENCE ICI</Text>
             <Text accessibilityRole="header" style={{color:"#fff",fontSize:32,fontWeight:"900"}}>Chaque voiture a une histoire. Collectionne-la.</Text>
             <Text style={{color:C.muted,fontSize:16,lineHeight:24}}>{accountState === "loading" ? "Connexion à ton compte…" : accountState === "error" ? "Impossible de vérifier ton compte. Vérifie ta connexion et réessaie." : "Crée ton compte gratuit pour identifier les voitures et obtenir 5 scans par jour, renouvelés à minuit (heure de Paris)."}</Text>
             {accountState === "guest" ? <>
-              <Btn label="Créer mon compte gratuit" onPress={() => {setAuthMode("register");setTab("shop");}} />
-              <Btn label="J’ai déjà un compte" outline onPress={() => {setAuthMode("login");setTab("shop");}} />
+              <Btn label="Créer mon compte gratuit" onPress={() => {setAuthMode("register");setTab("home");}} />
+              <Btn label="J’ai déjà un compte" outline onPress={() => {setAuthMode("login");setTab("home");}} />
               <Text style={{color:C.muted,fontSize:12}}>Aucune carte bancaire nécessaire · Ton garage reste sur cet appareil</Text>
             </> : <Btn label="Réessayer la connexion" onPress={() => refreshAccount().catch(() => {})} />}
           </View>

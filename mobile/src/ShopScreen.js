@@ -23,7 +23,7 @@ const money = (product) =>
     currency: product.currency,
   }).format(product.amount / 100);
 
-export function ShopScreen({ entitlements, onRefresh, initialMode = "register", onAuthenticated }) {
+export function ShopScreen({ entitlements, onRefresh, initialMode = "register", onAuthenticated, accountOnly = false }) {
   const [products, setProducts] = useState([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -50,7 +50,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
 
   useEffect(() => {
     let live = true;
-    api("/catalog")
+    if (!accountOnly) api("/catalog")
       .then((data) => {
         if (live) setProducts(data.products);
       })
@@ -64,7 +64,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
       live = false;
       sub.remove();
     };
-  }, [onRefresh]);
+  }, [onRefresh, accountOnly]);
 
   const authenticate = () =>
     run(async () => {
@@ -231,6 +231,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
         </Text>
       )}
       {busy && <ActivityIndicator color="#FBBF24" />}
+      {!accountOnly && <>
       {!checkoutAllowed && (
         <Text style={styles.message}>
           Les achats dans cette version mobile ne sont pas encore disponibles.
@@ -298,6 +299,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
           ? "Les achats démo sont simulés sur cet appareil. Aucun paiement, aucune carte bancaire."
           : "Paiement sécurisé par Stripe. Les achats sont activés après confirmation du paiement. Les codes de réduction se saisissent sur la page de paiement."}
       </Text>
+      </>}
     </ScrollView>
   );
 }
