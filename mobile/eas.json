@@ -22,6 +22,14 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "connected-preview": {
+      "extends": "preview",
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_DEMO_MODE": "false",
+        "EXPO_PUBLIC_ENABLE_NATIVE_CHECKOUT": "false"
+      }
     }
   }
 }
