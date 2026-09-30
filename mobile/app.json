@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "CarDrive TCG",
+    "slug": "cardrivetcg",
+    "version": "0.3.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "cardrivetcg",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "permissions": [
+        "CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.gaalster.cardrivetcg",
+      "versionCode": 1
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CarDrive utilise la caméra pour photographier les véhicules.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-secure-store",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "delayAppMeasurementInit": true,
+          "androidSdk": "classic"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "37b2d75f-2653-4456-8652-d184308cc60e"
+      }
+    }
+  }
+}
