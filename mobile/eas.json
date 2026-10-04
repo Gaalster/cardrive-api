@@ -29,7 +29,8 @@
       "env": {
         "EXPO_PUBLIC_DEMO_MODE": "false",
         "EXPO_PUBLIC_ENABLE_NATIVE_CHECKOUT": "false",
-        "EXPO_PUBLIC_API_URL": "https://cardrive-native.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://cardrive-native.onrender.com",
+        "EXPO_PUBLIC_ADMOB_BANNER_ID": "ca-app-pub-2258285180527094/8273970559"
       }
     }
   }
