@@ -180,6 +180,10 @@ export function createApplication({
       }
       throw fail(404, "Route inconnue");
     } catch (error) {
+      if (req.url?.split('?')[0] === '/ads/ssv') {
+        const reason = error.status ? error.message : 'Erreur interne';
+        console.warn('[AdMob SSV v2]', error.status || 500, reason);
+      }
       if (!error.status)
         console.error("Request failed:", error.type || error.name);
       if (!res.headersSent)
