@@ -29,6 +29,11 @@ export function createAds(store, {keyFor = googleKey, unit = process.env.ADMOB_R
       if (new Set(params.keys()).size !== [...params.keys()].length) throw fail(400,'Paramètres dupliqués');
       const key = await keyFor(match[3]);
       if (!key || !verify('sha256', Buffer.from(match[1]), key, Buffer.from(decodeURIComponent(match[2]),'base64url'))) throw fail(400,'Signature publicitaire invalide');
+      // Signed AdMob console probe: connectivity only, never awards a scan.
+      if (params.get('user_id') === 'cardrive-validation' &&
+          params.get('custom_data') === 'configuration-admob') {
+        return {ok:true, validationOnly:true};
+      }
       const unitNumber = unit.split('/').pop();
       if (![unit,unitNumber].includes(params.get('ad_unit')) || params.get('reward_amount') !== '1' || params.get('reward_item') !== 'scan') throw fail(400,'Récompense incorrecte');
       const tx = params.get('transaction_id');
