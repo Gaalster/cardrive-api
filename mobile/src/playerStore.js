@@ -1,3 +1,4 @@
+import { createAccountStorage } from "./accountStorage.mjs";
 import { DEMO_MODE } from "./config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeApp, getApps } from "firebase/app";
@@ -180,30 +181,13 @@ export async function fetchPlayerById(id) {
   }
 }
 
-export async function loadPlayer() {
-  try {
-    const id = await AsyncStorage.getItem(STORAGE_KEY + "_id");
-    if (!id) return null;
-    const raw = await AsyncStorage.getItem(STORAGE_KEY + "_" + id);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+const accountStorage = createAccountStorage(AsyncStorage, STORAGE_KEY);
+export async function loadPlayer(accountId) {
+  return accountStorage.load(DEMO_MODE ? 'demo' : accountId);
 }
-
 export async function savePlayer(player) {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEY + "_id", player.id);
-    await AsyncStorage.setItem(
-      STORAGE_KEY + "_" + player.id,
-      JSON.stringify(player),
-    );
-  } catch (e) {
-    console.error("Save error:", e);
-  }
+  return accountStorage.save(DEMO_MODE ? {...player, accountId:'demo'} : player);
 }
-
-export async function clearLocalPlayer() {
-  const keys = (await AsyncStorage.getAllKeys()).filter(key => key.startsWith(STORAGE_KEY));
-  if (keys.length) await AsyncStorage.multiRemove(keys);
+export async function clearLocalPlayer(accountId) {
+  return accountStorage.remove(DEMO_MODE ? 'demo' : accountId);
 }

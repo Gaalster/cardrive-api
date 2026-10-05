@@ -1,0 +1,22 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createAccountStorage} from '../src/accountStorage.mjs';
+test('separate accounts, reconnect, deletion and unowned legacy records', async () => {
+ const rows = new Map([['player_id','legacy'],['player_legacy',JSON.stringify({garage:['old']})]]);
+ const storage = {getItem:async k=>rows.get(k),setItem:async(k,v)=>rows.set(k,v),removeItem:async k=>rows.delete(k)};
+ const store=createAccountStorage(storage,'player');
+ assert.equal(await store.load('A'),null);
+ await store.save({accountId:'A',garage:['carA'],completions:['challengeA']});
+ assert.equal(await store.load('B'),null);
+ await store.save({accountId:'B',garage:['carB']});
+ assert.deepEqual((await store.load('A')).garage,['carA']);
+ assert.deepEqual((await createAccountStorage(storage,'player').load('A')).completions,['challengeA']);
+ await store.remove('B');
+ assert.equal(await store.load('B'),null);
+ assert.deepEqual((await store.load('A')).garage,['carA']);
+ await assert.rejects(store.save({garage:['guest']}));
+ await assert.rejects(store.load(null));
+ rows.set('player_account_B',JSON.stringify({accountId:'A',garage:['wrong']}));
+ assert.equal(await store.load('B'),null);
+ assert.ok(rows.has('player_legacy'));
+});

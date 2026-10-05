@@ -176,7 +176,7 @@ export function createApplication({
       }
       if (req.method === "GET" && path === "/me") {
         await billing.syncPremium(id);
-        return send(200, await store.entitlements(id));
+        return send(200, { ...(await store.entitlements(id)), accountId: id });
       }
       if (req.method === "POST" && path === "/checkout")
         return send(

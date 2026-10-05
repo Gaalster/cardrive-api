@@ -2600,42 +2600,60 @@ function AppInner() {
   const [accountError, setAccountError] = useState("");
   const [accountState, setAccountState] = useState("loading");
   const [authMode, setAuthMode] = useState("register");
+  const accountRef = useRef(null);
+  const refreshVersion = useRef(0);
   const playerRef = useRef(null);
   playerRef.current = player;
 
   const applyEntitlements = useCallback((value) => {
-    setEntitlements(value);
+    setEntitlements({...value, accountId: value.accountId || accountRef.current});
     setFuel(value.remaining);
   }, []);
 
+  const endSession = useCallback(() => {
+    refreshVersion.current++;
+    accountRef.current = null;
+    playerRef.current = null;
+    setPlayer(null);
+    setTab('home'); setRechargeOpen(false); setPopup(null);
+    applyEntitlements({isPremium:false,remaining:0,credits:0});
+    setAccountState('guest');
+  }, [applyEntitlements]);
+
   const refreshAccount = useCallback(async () => {
+    const version = ++refreshVersion.current;
     try {
-      const value = await api("/me");
+      const value = await api('/me');
+      if (version !== refreshVersion.current) return;
+      const owner = DEMO_MODE ? 'demo' : value.accountId;
+      if (!owner) throw Error('Mets à jour le serveur pour vérifier ton compte.');
+      if (accountRef.current !== owner) {
+        accountRef.current = null;
+        playerRef.current = null; setPlayer(null);
+        setAccountState('loading');
+        const saved = await loadPlayer(owner);
+        if (version !== refreshVersion.current) return;
+        accountRef.current = owner;
+        playerRef.current = saved;
+        setPlayer(saved ? {...saved,isPremium:false} : null);
+        setTab('home'); setRechargeOpen(false); setPopup(null);
+      }
       applyEntitlements(value);
-      setAccountError("");
-      setAccountState("connected");
+      setAccountError(''); setAccountState('connected');
       return value;
     } catch (error) {
-      applyEntitlements({ isPremium: false, remaining: 0, credits: 0 });
-      setAccountState(error.status === 401 ? "guest" : "error");
+      if (version !== refreshVersion.current) return;
+      endSession();
+      setAccountState(error.status === 401 ? 'guest' : 'error');
       setAccountError(error.message);
       throw error;
     }
-  }, [applyEntitlements]);
+  }, [applyEntitlements, endSession]);
 
   useEffect(() => {
     let live = true;
-    loadPlayer()
-      .then((saved) => {
-        if (live && saved) setPlayer({ ...saved, isPremium: false });
-      })
-      .finally(() => {
-        if (live) setLoading(false);
-      });
-    refreshAccount().catch(() => {});
-    return () => {
-      live = false;
-    };
+    refreshAccount().catch(() => {}).finally(() => {if (live) setLoading(false);});
+    return () => {live = false; refreshVersion.current++;};
   }, [refreshAccount]);
 
   useEffect(() => {
@@ -2657,7 +2675,7 @@ function AppInner() {
     const poll = async () => {
       const remote = await fetchPlayerById(player.id);
       const current = playerRef.current;
-      if (!live || !remote || current?.id !== player.id) return;
+      if (!live || !remote || current?.id !== player.id || current.accountId !== accountRef.current) return;
       const updated = {
         ...current,
         friendRequests: remote.friendRequests || [],
@@ -2675,6 +2693,8 @@ function AppInner() {
   }, [player?.id]);
 
   const persist = async (updated) => {
+    if (!accountRef.current || updated.accountId !== accountRef.current) return false;
+    playerRef.current = updated;
     setPlayer(updated);
     await savePlayer(updated);
     syncToFirebase(updated);
@@ -2683,6 +2703,7 @@ function AppInner() {
   const createPlayer = async ({ name, avatar }) => {
     await persist({
       id: uid(),
+      accountId: accountRef.current,
       name,
       avatar,
       garage: [],
@@ -2692,7 +2713,8 @@ function AppInner() {
   };
 
   const addCar = async (car) => {
-    if (!player) return;
+    if (!player || player.accountId !== accountRef.current) return;
+    const owner = accountRef.current;
     const dup = player.garage.find(
       (c) => c.make === car.make && c.model === car.model,
     );
@@ -2728,7 +2750,8 @@ function AppInner() {
       garage: newGarage,
       completions: newCompletions,
     });
-    if (completed.length > 0) setTimeout(() => setPopup(completed[0]), 500);
+    if (owner !== accountRef.current) return;
+    if (completed.length > 0) setTimeout(() => {if (owner === accountRef.current) setPopup(completed[0]);}, 500);
     setTab("garage");
   };
 
@@ -2765,7 +2788,7 @@ function AppInner() {
       </View>
     );
 
-  if (!player)
+  if (!player || (!DEMO_MODE && accountState !== "connected"))
     return (
       <View style={{ flex: 1, backgroundColor: C.bg }}>
         <StatusBar
@@ -2774,7 +2797,7 @@ function AppInner() {
           translucent
         />
         {!DEMO_MODE && accountState !== "connected" ? (
-          <ShopScreen onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} accountOnly initialMode="register" entitlements={entitlements} onRefresh={refreshAccount} />
+          <ShopScreen onSessionEnded={endSession} onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} accountOnly initialMode="register" entitlements={entitlements} onRefresh={refreshAccount} />
         ) : <OnboardingScreen onDone={createPlayer} />}
       </View>
     );
@@ -2907,7 +2930,7 @@ function AppInner() {
             <Text style={{color:C.muted,fontSize:14,lineHeight:21}}>{accountState === "connected" ? "Ton compte et tes scans, au même endroit." : "Crée ton compte ou connecte-toi ici pour profiter de 5 scans gratuits par jour."}</Text>
             {(DEMO_MODE || accountState === "connected") && <Btn label="Photographier une voiture" onPress={() => setTab("scan")} />}
           </View>
-          <ShopScreen onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} key={authMode} accountOnly initialMode={authMode} entitlements={entitlements} onRefresh={refreshAccount} />
+          <ShopScreen onSessionEnded={endSession} onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} key={authMode} accountOnly initialMode={authMode} entitlements={entitlements} onRefresh={refreshAccount} />
         </View>}
 
         {tab === "scan" && !DEMO_MODE && accountState !== "connected" && (
@@ -2932,7 +2955,7 @@ function AppInner() {
           />
         )}
         {tab === "shop" && (
-          <ShopScreen onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} initialMode={authMode} onAuthenticated={() => setTab("scan")} entitlements={entitlements} onRefresh={refreshAccount} />
+          <ShopScreen onSessionEnded={endSession} onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} initialMode={authMode} onAuthenticated={() => setTab("scan")} entitlements={entitlements} onRefresh={refreshAccount} />
         )}
         {tab === "garage" && <GarageScreen player={player} />}
         {tab === "challenge" && (
@@ -3029,7 +3052,7 @@ function AppInner() {
         >
           <SafeAreaViewCompat style={{ flex: 1, backgroundColor: C.bg }}>
             <Btn label="Fermer la boutique" onPress={() => setPremium(false)} />
-            <ShopScreen onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}}
+            <ShopScreen onSessionEnded={endSession} onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}}
               entitlements={entitlements}
               onRefresh={refreshAccount}
             />

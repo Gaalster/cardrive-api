@@ -1,5 +1,5 @@
-import { clearLocalPlayer } from "./playerStore";
 import { clearLocalPhotos } from "./photos";
+import { loadPlayer, clearLocalPlayer } from "./playerStore";
 import { AdsPanel } from "./AdsPanel";
 import { DEMO_MODE } from "./config";
 import React, { useEffect, useRef, useState } from "react";
@@ -25,7 +25,7 @@ const money = (product) =>
     currency: product.currency,
   }).format(product.amount / 100);
 
-export function ShopScreen({ entitlements, onRefresh, initialMode = "register", onAuthenticated, accountOnly = false, onDeleted }) {
+export function ShopScreen({ entitlements, onRefresh, initialMode = "register", onAuthenticated, accountOnly = false, onDeleted, onSessionEnded }) {
   const [deleting, setDeleting] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
@@ -183,8 +183,10 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
                     await onRefresh();
                     return;
                   }
-                  await api("/auth/logout", {});
+                  const logout = api("/auth/logout", {}).catch(() => {});
                   await setToken(null);
+                  onSessionEnded?.();
+                  await logout;
                   await onRefresh().catch(() => {});
                 })
               }
@@ -198,8 +200,10 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
                 <Action label="Confirmer la suppression définitive" disabled={busy || !deletePassword || deleteConfirmation !== 'SUPPRIMER'} onPress={()=>run(async()=>{
                   await api('/account/delete',{password:deletePassword,confirmation:deleteConfirmation});
                   await setToken(null);
-                  await clearLocalPlayer();
-                  await clearLocalPhotos();
+                  const local = await loadPlayer(entitlements.accountId);
+                  await clearLocalPhotos(local?.garage || []);
+                  await clearLocalPlayer(entitlements.accountId);
+                  onSessionEnded?.();
                   onDeleted?.();
                   await onRefresh().catch(()=>{});
                   setDeleting(false);setDeletePassword('');setMessage('Compte et données locales supprimés.');

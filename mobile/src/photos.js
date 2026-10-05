@@ -12,7 +12,13 @@ export async function keepPhoto(uri, base64) {
   return destination;
 }
 
-export async function clearLocalPhotos() {
+export async function clearLocalPhotos(garage = []) {
   if (Platform.OS === 'web') return;
-  await FileSystem.deleteAsync(`${FileSystem.documentDirectory}${DEMO_MODE ? 'demo-cards' : 'cards'}/`, {idempotent:true});
+  const directory = `${FileSystem.documentDirectory}${DEMO_MODE ? 'demo-cards' : 'cards'}/`;
+  for (const card of garage) {
+    const uri = card.imageUri;
+    if (typeof uri === 'string' && uri.startsWith(directory) && !uri.slice(directory.length).includes('/')) {
+      await FileSystem.deleteAsync(uri, {idempotent:true});
+    }
+  }
 }

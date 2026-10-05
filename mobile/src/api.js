@@ -6,6 +6,7 @@ import * as SecureStore from "expo-secure-store";
 const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || "").replace(/\/$/, "");
 const SESSION_KEY = "cardrive.session.v1";
 let memoryToken;
+let sessionVersion = 0;
 
 async function getToken() {
   if (memoryToken !== undefined) return memoryToken;
@@ -17,6 +18,8 @@ async function getToken() {
 }
 
 export async function setToken(token) {
+  sessionVersion++;
+  memoryToken = token;
   if (Platform.OS === "web") {
     if (token) globalThis.sessionStorage?.setItem(SESSION_KEY, token);
     else globalThis.sessionStorage?.removeItem(SESSION_KEY);
@@ -28,6 +31,7 @@ export async function setToken(token) {
 export async function api(path, body) {
   if (DEMO_MODE) return demoApi(path, body);
   if (!BASE_URL) throw new Error("Serveur à configurer");
+  const version = sessionVersion;
   const token = await getToken();
   const controller = new AbortController();
   const timeout = setTimeout(
@@ -45,6 +49,7 @@ export async function api(path, body) {
       signal: controller.signal,
     });
     const data = await response.json();
+    if (version !== sessionVersion) throw new Error("Session modifiée. Réessaie depuis ton compte.");
     if (!response.ok) {
       if (response.status === 401) await setToken(null);
       const error = new Error(data.error || "Le serveur est indisponible");
