@@ -2,6 +2,7 @@ import {randomBytes, randomUUID} from 'node:crypto';
 import {fail, tokenHash} from './store.mjs';
 
 export function createPrivacy(store) {
+  if (store.privacy) return store.privacy;
   store.db.exec(`CREATE TABLE IF NOT EXISTS support_tickets (
     id TEXT PRIMARY KEY, secret_hash TEXT NOT NULL, subject TEXT NOT NULL,
     message TEXT NOT NULL, reply TEXT NOT NULL DEFAULT '', created INTEGER NOT NULL);

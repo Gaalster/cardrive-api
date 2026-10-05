@@ -1,3 +1,4 @@
+import {createSupabaseStore} from "./supabase-store.mjs";
 import {createPrivacy, privacyPortal, portalScript, adminPortal, adminScript} from "./privacy.mjs";
 import http from "node:http";
 import { createAds } from "./ads.mjs";
@@ -15,7 +16,9 @@ export function createApplication({
   recognizeCar = recognize,
   publicUrl = process.env.PUBLIC_URL || "http://localhost:4242",
 }) {
-  const billing = createBilling(stripe, store, publicUrl.replace(/\/$/, ""));
+  const remote = store.kind === 'supabase';
+  if (remote && process.env.ENABLE_PAYMENTS === 'true') throw Error('Les paiements restent désactivés sur la base Supabase de test.');
+  const billing = remote ? {syncPremium:async()=>{},catalog:async()=>[]} : createBilling(stripe, store, publicUrl.replace(/\/$/, ""));
   const ads = createAds(store);
   const privacy = createPrivacy(store);
   const locks = new Set();
@@ -92,7 +95,7 @@ export function createApplication({
           `<!doctype html><html lang="fr"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CarDrive</title><body style="background:#08080f;color:#eee;font:18px system-ui;padding:40px"><h1 style="color:#fbbf24">CarDrive TCG</h1><h2>${label}</h2><p>Reviens dans CarDrive, puis ouvre la boutique et appuie sur « Actualiser mes achats ».</p></body></html>`,
         );
       }
-      if (["/checkout", "/portal", "/webhooks/stripe"].includes(path) && process.env.ENABLE_PAYMENTS !== "true")
+      if (["/checkout", "/portal", "/webhooks/stripe"].includes(path) && (remote || process.env.ENABLE_PAYMENTS !== "true"))
         throw fail(503, "Achats désactivés pendant la bêta connectée.");
       if (req.method === "GET" && path === "/ads/ssv") return send(200, await ads.callback(req.url));
       let raw = Buffer.alloc(0);
@@ -120,8 +123,10 @@ export function createApplication({
           throw fail(400, "JSON invalide");
         }
       }
-      if (req.method === "GET" && path === "/health")
-        return send(200, { ok: true, service: "cardrive-native", version: 1 });
+      if (req.method === "GET" && path === "/health") {
+        if (store.health) await store.health();
+        return send(200, {ok:true,service:'cardrive-native',version:2,database:remote?'supabase':'sqlite'});
+      }
       if (req.method === "GET" && path === "/catalog")
         return send(200, { products: stripe ? await billing.catalog() : [] });
       if (
@@ -146,32 +151,32 @@ export function createApplication({
         const id = path.endsWith("register")
           ? await store.register(email, body.password)
           : await store.login(email, body.password);
-        return send(200, { token: store.session(id) });
+        return send(200, { token: await store.session(id) });
       }
       if (req.method === 'POST' && path === '/support/tickets') {
         rateLimit(`support:${req.socket.remoteAddress}`,5,3600000);
         if (!process.env.SUPPORT_ADMIN_ACCOUNT_ID) throw fail(503,'Le support est en cours de configuration. Réessayez plus tard.');
-        return send(201,privacy.createTicket(body));
+        return send(201,await privacy.createTicket(body));
       }
-      if (req.method === 'POST' && path === '/support/read') return send(200,privacy.readTicket(body));
+      if (req.method === 'POST' && path === '/support/read') return send(200,await privacy.readTicket(body));
       const token = req.headers.authorization?.replace(/^Bearer /, "") || "";
-      const id = store.authenticate(token);
-      if (req.method === 'POST' && path === '/support/admin') return send(200,privacy.admin(id,body));
+      const id = await store.authenticate(token);
+      if (req.method === 'POST' && path === '/support/admin') return send(200,await privacy.admin(id,body));
       if (req.method === 'POST' && path === '/account/delete') {
         rateLimit(`delete:${id}`,5,900000);
         return send(200,await locked(`scan:${id}`,()=>privacy.removeAccount(id,body.password,body.confirmation)));
       }
       if (req.method === "POST" && path === "/ads/ticket") {
         rateLimit(`ads:${id}`, 10, 60000);
-        return send(200, ads.ticket(id));
+        return send(200, await ads.ticket(id));
       }
       if (req.method === "POST" && path === "/auth/logout") {
-        store.logout(token);
+        await store.logout(token);
         return send(200, { ok: true });
       }
       if (req.method === "GET" && path === "/me") {
         await billing.syncPremium(id);
-        return send(200, store.entitlements(id));
+        return send(200, await store.entitlements(id));
       }
       if (req.method === "POST" && path === "/checkout")
         return send(
@@ -186,12 +191,12 @@ export function createApplication({
         rateLimit(`scan:${id}`, 20, 60000);
         const result = await locked(`scan:${id}`, async () => {
           await billing.syncPremium(id);
-          const current = store.entitlements(id);
+          const current = await store.entitlements(id);
           if (!current.isPremium && current.remaining <= 0)
             throw fail(402, "Plus de scans disponibles. Ouvre la boutique.");
           const car = await recognizeCar(body);
-          store.consume(id);
-          return { car, entitlements: store.entitlements(id) };
+          await store.consume(id);
+          return { car, entitlements: await store.entitlements(id) };
         });
         return send(200, result);
       }
@@ -217,9 +222,17 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 ) {
-  const dbPath = resolve(process.env.DATABASE_PATH || "./data/cardrive.sqlite");
-  mkdirSync(dirname(dbPath), { recursive: true });
-  const store = createStore(dbPath);
+  const driver = process.env.DATABASE_DRIVER || 'sqlite';
+  if (!['sqlite','supabase'].includes(driver)) throw Error('DATABASE_DRIVER invalide.');
+  let store;
+  if (driver === 'supabase') {
+    store = createSupabaseStore();
+    await store.health(); // Fail closed; never fall back to ephemeral SQLite.
+  } else {
+    const dbPath = resolve(process.env.DATABASE_PATH || './data/cardrive.sqlite');
+    mkdirSync(dirname(dbPath), {recursive:true});
+    store = createStore(dbPath);
+  }
   const stripe = process.env.STRIPE_SECRET_KEY
     ? new Stripe(process.env.STRIPE_SECRET_KEY, {
         maxNetworkRetries: 2,
@@ -233,7 +246,7 @@ if (
   );
   const stop = () =>
     server.close(() => {
-      store.db.close();
+      store.db?.close();
       process.exit(0);
     });
   process.on("SIGTERM", stop);

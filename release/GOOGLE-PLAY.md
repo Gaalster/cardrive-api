@@ -14,13 +14,15 @@
 
 ## Blocage avant déploiement du serveur
 Render Free perd sa base SQLite locale lors des redéploiements/redémarrages. Ne pas changer la branche du service actuel sans plan de conservation ou accord explicite de réinitialisation des comptes de test.
-Deux solutions : service avec disque persistant (payant), ou migration vers une base externe durable (nécessite un compte de base de données et une adaptation du code).
-Aucune ressource payante n'a été créée.
+Solution choisie : Render Free pour le serveur et Supabase Free pour les comptes et crédits. L'adaptateur et la migration sont prêts ; le projet cloud et la bascule restent à effectuer. Suivre [SUPABASE-TESTEURS.md](SUPABASE-TESTEURS.md).
+Aucune ressource payante n'a été créée. Les données SQLite existantes ne sont pas copiées automatiquement.
 
-Configuration du serveur après choix du stockage :
+Configuration du serveur après création de la base :
 - PUBLIC_URL=https://cardrive-native.onrender.com
 - ENABLE_PAYMENTS=false
-- DATABASE_PATH : chemin de la base sur le stockage persistant réel ; une variable seule ne crée pas de disque.
+- DATABASE_DRIVER=supabase
+- SUPABASE_URL : URL du projet créé.
+- SUPABASE_SECRET_KEY : clé serveur, uniquement dans les variables Render.
 - SUPPORT_ADMIN_ACCOUNT_ID : UUID du compte Android de l'éditeur, relevé de manière privée depuis la base. Ne pas publier cet identifiant dans l'app et ne pas utiliser une valeur client comme autorisation.
 Sans administrateur configuré, les nouvelles demandes de support reçoivent une erreur explicite plutôt qu'être acceptées sans destinataire.
 Les comptes avec un historique Stripe sont orientés vers le support : ne jamais effacer silencieusement des obligations financières ou un abonnement actif.

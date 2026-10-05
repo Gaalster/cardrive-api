@@ -10,10 +10,11 @@ async function googleKey(id) {
   return keysCache.keys.find(k => String(k.keyId) === id)?.pem;
 }
 export function createAds(store, {keyFor = googleKey, unit = process.env.ADMOB_REWARDED_UNIT_ID} = {}) {
-  store.db.exec(`CREATE TABLE IF NOT EXISTS ad_tickets(id TEXT PRIMARY KEY, account_id TEXT NOT NULL REFERENCES accounts(id), expires INTEGER NOT NULL, transaction_id TEXT UNIQUE);`);
+  if (!store.createAdTicket) store.db.exec(`CREATE TABLE IF NOT EXISTS ad_tickets(id TEXT PRIMARY KEY, account_id TEXT NOT NULL REFERENCES accounts(id), expires INTEGER NOT NULL, transaction_id TEXT UNIQUE);`);
   return {
     ticket(id) {
       if (!unit) throw fail(503, 'Les scans publicitaires seront disponibles après configuration AdMob.');
+      if (store.createAdTicket) return store.createAdTicket(id).then(ticket => ({ticket, userId:id, unit}));
       if (store.entitlements(id).isPremium) throw fail(409, 'Ton Pass inclut déjà les scans.');
       const ticket = randomUUID();
       store.db.prepare('DELETE FROM ad_tickets WHERE expires<? AND transaction_id IS NULL').run(Date.now()-86400000);
@@ -39,6 +40,7 @@ export function createAds(store, {keyFor = googleKey, unit = process.env.ADMOB_R
       const tx = params.get('transaction_id');
       const time = Number(params.get('timestamp'));
       if (!tx || tx.length>256 || !Number.isFinite(time) || Math.abs(Date.now()-time)>86400000) throw fail(400,'Événement expiré');
+      if (store.awardAd) return store.awardAd({ticket:params.get('custom_data'),id:params.get('user_id'),transaction:tx,timestamp:time});
       return store.transaction(() => {
         const ticket = store.db.prepare('SELECT * FROM ad_tickets WHERE id=?').get(params.get('custom_data'));
         if (!ticket || ticket.account_id !== params.get('user_id')) throw fail(400,'Compte incorrect');
