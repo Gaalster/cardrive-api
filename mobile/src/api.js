@@ -32,7 +32,7 @@ export async function api(path, body) {
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
-    path === "/recognize" ? 90000 : 25000,
+    path === "/recognize" ? 90000 : 70000,
   );
   try {
     const response = await fetch(`${BASE_URL}${path}`, {

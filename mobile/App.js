@@ -2774,7 +2774,7 @@ function AppInner() {
           translucent
         />
         {!DEMO_MODE && accountState !== "connected" ? (
-          <ShopScreen accountOnly initialMode="register" entitlements={entitlements} onRefresh={refreshAccount} />
+          <ShopScreen onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} accountOnly initialMode="register" entitlements={entitlements} onRefresh={refreshAccount} />
         ) : <OnboardingScreen onDone={createPlayer} />}
       </View>
     );
@@ -2877,7 +2877,7 @@ function AppInner() {
           </Text>
         </View>
       )}
-      <TouchableOpacity accessibilityRole="link" accessibilityLabel="Support Gaalster, ouvre le navigateur" onPress={() => Linking.openURL("https://cardrive-tcg-demo.kiki2823.chatgpt.site/support").catch(() => Alert.alert("Support", "Impossible d’ouvrir le navigateur."))} style={{padding:12,backgroundColor:C.surface}}><Text style={{color:C.accent,textAlign:"center",fontSize:14}}>Gaalster · Support (navigateur)</Text></TouchableOpacity>
+      <TouchableOpacity accessibilityRole="link" accessibilityLabel="Support Gaalster, ouvre le navigateur" onPress={() => Linking.openURL("https://cardrive-native.onrender.com/support").catch(() => Alert.alert("Support", "Impossible d’ouvrir le navigateur."))} style={{padding:12,backgroundColor:C.surface}}><Text style={{color:C.accent,textAlign:"center",fontSize:14}}>Gaalster · Support (navigateur)</Text></TouchableOpacity>
       {!!accountError && accountState !== "guest" && (
         <TouchableOpacity
           onPress={() => setTab("home")}
@@ -2907,7 +2907,7 @@ function AppInner() {
             <Text style={{color:C.muted,fontSize:14,lineHeight:21}}>{accountState === "connected" ? "Ton compte et tes scans, au même endroit." : "Crée ton compte ou connecte-toi ici pour profiter de 5 scans gratuits par jour."}</Text>
             {(DEMO_MODE || accountState === "connected") && <Btn label="Photographier une voiture" onPress={() => setTab("scan")} />}
           </View>
-          <ShopScreen key={authMode} accountOnly initialMode={authMode} entitlements={entitlements} onRefresh={refreshAccount} />
+          <ShopScreen onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} key={authMode} accountOnly initialMode={authMode} entitlements={entitlements} onRefresh={refreshAccount} />
         </View>}
 
         {tab === "scan" && !DEMO_MODE && accountState !== "connected" && (
@@ -2932,7 +2932,7 @@ function AppInner() {
           />
         )}
         {tab === "shop" && (
-          <ShopScreen initialMode={authMode} onAuthenticated={() => setTab("scan")} entitlements={entitlements} onRefresh={refreshAccount} />
+          <ShopScreen onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} initialMode={authMode} onAuthenticated={() => setTab("scan")} entitlements={entitlements} onRefresh={refreshAccount} />
         )}
         {tab === "garage" && <GarageScreen player={player} />}
         {tab === "challenge" && (
@@ -3029,7 +3029,7 @@ function AppInner() {
         >
           <SafeAreaViewCompat style={{ flex: 1, backgroundColor: C.bg }}>
             <Btn label="Fermer la boutique" onPress={() => setPremium(false)} />
-            <ShopScreen
+            <ShopScreen onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}}
               entitlements={entitlements}
               onRefresh={refreshAccount}
             />

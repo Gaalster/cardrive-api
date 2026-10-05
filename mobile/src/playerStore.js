@@ -202,3 +202,8 @@ export async function savePlayer(player) {
     console.error("Save error:", e);
   }
 }
+
+export async function clearLocalPlayer() {
+  const keys = (await AsyncStorage.getAllKeys()).filter(key => key.startsWith(STORAGE_KEY));
+  if (keys.length) await AsyncStorage.multiRemove(keys);
+}

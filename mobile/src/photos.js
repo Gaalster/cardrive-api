@@ -11,3 +11,8 @@ export async function keepPhoto(uri, base64) {
   await FileSystem.copyAsync({ from: uri, to: destination });
   return destination;
 }
+
+export async function clearLocalPhotos() {
+  if (Platform.OS === 'web') return;
+  await FileSystem.deleteAsync(`${FileSystem.documentDirectory}${DEMO_MODE ? 'demo-cards' : 'cards'}/`, {idempotent:true});
+}

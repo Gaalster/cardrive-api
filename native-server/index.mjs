@@ -1,3 +1,4 @@
+import {createPrivacy, privacyPortal, portalScript, adminPortal, adminScript} from "./privacy.mjs";
 import http from "node:http";
 import { createAds } from "./ads.mjs";
 import { mkdirSync } from "node:fs";
@@ -16,6 +17,7 @@ export function createApplication({
 }) {
   const billing = createBilling(stripe, store, publicUrl.replace(/\/$/, ""));
   const ads = createAds(store);
+  const privacy = createPrivacy(store);
   const locks = new Set();
   const limits = new Map();
   const allowedOrigins = (
@@ -54,7 +56,7 @@ export function createApplication({
     };
     try {
       const origin = req.headers.origin;
-      if (origin && !allowedOrigins.includes(origin))
+      if (origin && origin !== publicUrl.replace(/\/$/, "") && !allowedOrigins.includes(origin))
         throw fail(403, "Origine non autorisée");
       if (origin) {
         res.setHeader("Access-Control-Allow-Origin", origin);
@@ -70,6 +72,10 @@ export function createApplication({
         return res.end();
       }
       const path = new URL(req.url, "http://localhost").pathname;
+      if (req.method === "GET" && ['/support','/delete-account','/account-tools.js','/support-admin','/support-admin.js'].includes(path)) {
+        res.writeHead(200, {'Content-Type':path.endsWith('.js')?'application/javascript; charset=utf-8':'text/html; charset=utf-8', 'Referrer-Policy':'no-referrer', 'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"});
+        return res.end(path === '/support-admin.js' ? adminScript : path === '/support-admin' ? adminPortal : path.endsWith('.js') ? portalScript : privacyPortal);
+      }
       if (req.method === "GET" && path.startsWith("/payment/")) {
         const label =
           path === "/payment/cancel"
@@ -142,8 +148,19 @@ export function createApplication({
           : await store.login(email, body.password);
         return send(200, { token: store.session(id) });
       }
+      if (req.method === 'POST' && path === '/support/tickets') {
+        rateLimit(`support:${req.socket.remoteAddress}`,5,3600000);
+        if (!process.env.SUPPORT_ADMIN_ACCOUNT_ID) throw fail(503,'Le support est en cours de configuration. Réessayez plus tard.');
+        return send(201,privacy.createTicket(body));
+      }
+      if (req.method === 'POST' && path === '/support/read') return send(200,privacy.readTicket(body));
       const token = req.headers.authorization?.replace(/^Bearer /, "") || "";
       const id = store.authenticate(token);
+      if (req.method === 'POST' && path === '/support/admin') return send(200,privacy.admin(id,body));
+      if (req.method === 'POST' && path === '/account/delete') {
+        rateLimit(`delete:${id}`,5,900000);
+        return send(200,await locked(`scan:${id}`,()=>privacy.removeAccount(id,body.password,body.confirmation)));
+      }
       if (req.method === "POST" && path === "/ads/ticket") {
         rateLimit(`ads:${id}`, 10, 60000);
         return send(200, ads.ticket(id));

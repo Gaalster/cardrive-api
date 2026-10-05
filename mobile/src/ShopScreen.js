@@ -1,3 +1,5 @@
+import { clearLocalPlayer } from "./playerStore";
+import { clearLocalPhotos } from "./photos";
 import { AdsPanel } from "./AdsPanel";
 import { DEMO_MODE } from "./config";
 import React, { useEffect, useRef, useState } from "react";
@@ -23,7 +25,10 @@ const money = (product) =>
     currency: product.currency,
   }).format(product.amount / 100);
 
-export function ShopScreen({ entitlements, onRefresh, initialMode = "register", onAuthenticated, accountOnly = false }) {
+export function ShopScreen({ entitlements, onRefresh, initialMode = "register", onAuthenticated, accountOnly = false, onDeleted }) {
+  const [deleting, setDeleting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [products, setProducts] = useState([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -50,7 +55,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
 
   useEffect(() => {
     let live = true;
-    if (!accountOnly) api("/catalog")
+    if (!accountOnly && checkoutAllowed) api("/catalog")
       .then((data) => {
         if (live) setProducts(data.products);
       })
@@ -104,7 +109,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
       <Text style={styles.eyebrow}>
         CARDRIVE TCG {DEMO_MODE ? "· DÉMO" : ""}
       </Text>
-      <Text style={styles.title}>Le stand 🛍️</Text>
+      <Text style={styles.title}>{accountOnly ? "Mon compte" : "Le stand 🛍️"}</Text>
       {DEMO_MODE && (
         <Text style={styles.message}>
           Démonstration locale : prix illustratifs, achats fictifs, aucune
@@ -112,8 +117,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
         </Text>
       )}
       <Text style={styles.description}>
-        Recharge tes scans ou prends le CarDrive Pass pour continuer ta
-        collection.
+        {checkoutAllowed ? "Recharge tes scans ou découvre le CarDrive Pass." : "Retrouve ton compte et tes scans gratuits du jour."}
       </Text>
       <View style={styles.card}>
         <Text style={styles.heading}>
@@ -143,7 +147,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
                 })
               }
             />
-            <Action
+            {checkoutAllowed && <Action
               label={
                 DEMO_MODE
                   ? "Désactiver le Pass fictif"
@@ -165,6 +169,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
                 })
               }
             />
+            }
             <Action
               label={
                 DEMO_MODE ? "Réinitialiser les scans démo" : "Me déconnecter"
@@ -184,6 +189,24 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
                 })
               }
             />
+            {!DEMO_MODE && <>
+              <Action label="Supprimer mon compte" secondary disabled={busy} onPress={()=>setDeleting(!deleting)} />
+              {deleting && <View>
+                <Text style={styles.description}>Suppression définitive du compte, de ses crédits gratuits ou publicitaires et du garage sur cet appareil. Confirme avec ton mot de passe et le mot SUPPRIMER.</Text>
+                <TextInput style={styles.input} value={deletePassword} onChangeText={setDeletePassword} secureTextEntry placeholder="Mot de passe actuel" placeholderTextColor="#aaa" autoCapitalize="none" />
+                <TextInput style={styles.input} value={deleteConfirmation} onChangeText={setDeleteConfirmation} placeholder="SUPPRIMER" placeholderTextColor="#aaa" autoCapitalize="characters" />
+                <Action label="Confirmer la suppression définitive" disabled={busy || !deletePassword || deleteConfirmation !== 'SUPPRIMER'} onPress={()=>run(async()=>{
+                  await api('/account/delete',{password:deletePassword,confirmation:deleteConfirmation});
+                  await setToken(null);
+                  await clearLocalPlayer();
+                  await clearLocalPhotos();
+                  onDeleted?.();
+                  await onRefresh().catch(()=>{});
+                  setDeleting(false);setDeletePassword('');setMessage('Compte et données locales supprimés.');
+                })} />
+                <Action label="Annuler" secondary disabled={busy} onPress={()=>{setDeleting(false);setDeletePassword('');setDeleteConfirmation('');}} />
+              </View>}
+            </>}
           </>
         ) : (
           <>
@@ -231,6 +254,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
         </Text>
       )}
       {busy && <ActivityIndicator color="#FBBF24" />}
+      <Action label="Confidentialité" secondary onPress={()=>Linking.openURL('https://cardrive.kiki2823.chatgpt.site/confidentialite.html').catch(()=>setMessage('Impossible d’ouvrir la page.'))} />
       {!accountOnly && <>
       {!checkoutAllowed && (
         <Text style={styles.message}>
@@ -238,7 +262,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
         </Text>
       )}
       {connected && !entitlements.isPremium && !DEMO_MODE && <AdsPanel reward onRefresh={onRefresh} />}
-      {["payment", "subscription"].map((mode) => (
+      {checkoutAllowed && ["payment", "subscription"].map((mode) => (
         <View key={mode}>
           <Text style={styles.section}>
             {mode === "payment" ? "Packs de scans" : "CarDrive Pass"}
@@ -285,7 +309,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
             ))}
         </View>
       ))}
-      {!products.length && (
+      {checkoutAllowed && !products.length && (
         <Action
           label="Recharger les offres"
           disabled={busy}
@@ -294,11 +318,11 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
           }
         />
       )}
-      <Text style={styles.description}>
+      {checkoutAllowed && <Text style={styles.description}>
         {DEMO_MODE
           ? "Les achats démo sont simulés sur cet appareil. Aucun paiement, aucune carte bancaire."
           : "Paiement sécurisé par Stripe. Les achats sont activés après confirmation du paiement. Les codes de réduction se saisissent sur la page de paiement."}
-      </Text>
+      </Text>}
       </>}
     </ScrollView>
   );
