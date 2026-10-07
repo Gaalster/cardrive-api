@@ -1,11 +1,11 @@
 export const C = {
-  bg: "#08080f",
-  surface: "#0e0e1a",
-  card: "#12121e",
-  border: "#1e1e30",
+  bg: "#090C10",
+  surface: "#10151B",
+  card: "#151B22",
+  border: "#303943",
   text: "#f0f0f8",
-  muted: "#4a4a6a",
-  accent: "#FBBF24",
+  muted: "#ADB7C3",
+  accent: "#F4C95D",
 };
 
 /* ══════════════════════════════════════════════════
@@ -14,7 +14,7 @@ export const C = {
 export const RARITIES = {
   COMMON: {
     id: "COMMON",
-    label: "Common",
+    label: "Commune",
     emoji: "⚪",
     color: "#9CA3AF",
     stars: 1,
@@ -22,7 +22,7 @@ export const RARITIES = {
   },
   UNCOMMON: {
     id: "UNCOMMON",
-    label: "Uncommon",
+    label: "Peu commune",
     emoji: "🟢",
     color: "#34D399",
     stars: 2,
@@ -38,7 +38,7 @@ export const RARITIES = {
   },
   EPIC: {
     id: "EPIC",
-    label: "Epic",
+    label: "Épique",
     emoji: "🟣",
     color: "#A78BFA",
     stars: 4,
@@ -46,9 +46,9 @@ export const RARITIES = {
   },
   LEGENDARY: {
     id: "LEGENDARY",
-    label: "Legendary",
+    label: "Légendaire",
     emoji: "🟡",
-    color: "#FBBF24",
+    color: "#F4C95D",
     stars: 5,
     score: 1000,
   },

@@ -1,3 +1,4 @@
+import { HomeScreen, LineIcon } from "./src/PremiumUI";
 import { AdsPanel } from "./src/AdsPanel";
 import { keepPhoto } from "./src/photos";
 import { DEMO_MODE } from "./src/config";
@@ -17,6 +18,7 @@ import {
   ActivityIndicator,
   Image,
   Dimensions,
+  useWindowDimensions,
   StatusBar,
   Platform,
   Modal,
@@ -164,7 +166,7 @@ function Btn({
 function CarCard({ car, onPress, size = "sm" }) {
   const r = car.rarity;
   const dup = (car.count || 1) > 1;
-  const imgH = size === "lg" ? 180 : 110;
+  const imgH = size === "lg" ? 220 : 156;
 
   return (
     <TouchableOpacity
@@ -214,41 +216,12 @@ function CarCard({ car, onPress, size = "sm" }) {
           </View>
         )}
       </View>
-      <View style={{ padding: size === "lg" ? 14 : 10 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: 6,
-          }}
-        >
-          <View style={{ flex: 1, marginRight: 6 }}>
-            <Text
-              style={{
-                fontSize: 9,
-                color: C.muted,
-                textTransform: "uppercase",
-                letterSpacing: 0.8,
-              }}
-            >
-              {car.make}
-            </Text>
-            <Text
-              style={{
-                fontSize: size === "lg" ? 17 : 13,
-                fontWeight: "800",
-                color: C.text,
-              }}
-              numberOfLines={1}
-            >
-              {car.model}
-            </Text>
-            <Text style={{ fontSize: 9, color: C.muted }}>{car.year}</Text>
-          </View>
-          <RarityBadge rarity={r} />
-        </View>
-        <Stars n={r.stars} color={r.color} size={size === "lg" ? 14 : 11} />
+      <View style={{ padding: 12, gap: 6 }}>
+        <Text style={{fontSize: 12, color: C.muted}}>{car.make}</Text>
+        <Text style={{fontSize: size === "lg" ? 22 : 16, fontWeight: "800", color: C.text}}>{car.model}</Text>
+        <Text style={{fontSize: 12, color: C.muted}}>{car.year}</Text>
+        <View style={{alignSelf: "flex-start", marginVertical: 4}}><RarityBadge rarity={RARITIES[r.id] || r} /></View>
+        <Stars n={r.stars} color={r.color} size={12} />
         {size === "lg" && car.power_hp > 0 && (
           <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}>
             {car.power_hp > 0 && (
@@ -1237,6 +1210,7 @@ const s2 = StyleSheet.create({
    GARAGE SCREEN
 ══════════════════════════════════════════════════ */
 function GarageScreen({ player }) {
+  const {width} = useWindowDimensions();
   const garage = player.garage || [];
   const [filter, setFilter] = useState("ALL");
   const [sort, setSort] = useState("date");
@@ -1264,19 +1238,20 @@ function GarageScreen({ player }) {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <View style={{ alignItems: "center", marginBottom: 16 }}>
+        <View style={{ alignItems: "flex-start", marginBottom: 20 }}>
           <Text
             style={{
-              fontSize: 10,
-              color: C.accent,
+              fontSize: 30,
+              fontWeight: "800",
+              color: C.text,
               textTransform: "uppercase",
-              letterSpacing: 2,
+              letterSpacing: -0.5,
               marginBottom: 4,
             }}
           >
             Mon Garage
           </Text>
-          <Text style={{ fontSize: 22, fontWeight: "900", color: C.text }}>
+          <Text style={{ fontSize: 15, color: C.muted }}>
             {garage.length} véhicule{garage.length !== 1 ? "s" : ""}
           </Text>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
@@ -1314,7 +1289,7 @@ function GarageScreen({ player }) {
               >
                 <Text
                   style={{
-                    fontSize: 8,
+                    fontSize: 11,
                     color: C.muted,
                     textTransform: "uppercase",
                   }}
@@ -1336,46 +1311,8 @@ function GarageScreen({ player }) {
           </View>
         </View>
 
-        {/* Rarity chips */}
-        <View style={{ flexDirection: "row", gap: 5, marginBottom: 14 }}>
-          {Object.values(RARITIES).map((r) => {
-            const act = filter === r.id;
-            return (
-              <TouchableOpacity
-                key={r.id}
-                onPress={() => setFilter(act ? "ALL" : r.id)}
-                style={{
-                  flex: 1,
-                  alignItems: "center",
-                  paddingVertical: 8,
-                  borderRadius: 10,
-                  backgroundColor: act ? r.color + "22" : "#ffffff06",
-                  borderWidth: 1,
-                  borderColor: act ? r.color + "66" : C.border,
-                }}
-              >
-                <Text style={{ fontSize: 13 }}>{r.emoji}</Text>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "900",
-                    color: act ? r.color : C.text,
-                  }}
-                >
-                  {rc[r.id] || 0}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 7,
-                    color: C.muted,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {r.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+        <View style={{flexDirection:"row",flexWrap:"wrap",gap:8,marginBottom:16}}>
+          {[{id:"ALL",label:"Toutes",color:C.accent}, ...Object.values(RARITIES)].map(r => <TouchableOpacity key={r.id} accessibilityRole="button" accessibilityState={{selected: filter === r.id}} onPress={() => setFilter(r.id)} style={{minHeight:40,paddingHorizontal:12,paddingVertical:10,borderRadius:14,borderWidth:1,borderColor:filter === r.id ? r.color : C.border,backgroundColor:filter === r.id ? r.color+"15" : C.surface}}><Text style={{fontSize:12,color:filter === r.id ? r.color : C.muted,fontWeight:"600"}}>{r.label} {r.id === "ALL" ? garage.length : rc[r.id]}</Text></TouchableOpacity>)}
         </View>
 
         {/* Sort */}
@@ -1422,7 +1359,7 @@ function GarageScreen({ player }) {
         ) : (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {displayed.map((car) => (
-              <View key={car.id} style={{ width: (W - 42) / 2 }}>
+              <View key={car.id} style={{ width: width < 360 ? "100%" : "48.5%" }}>
                 <CarCard car={car} onPress={() => setDetail(car)} />
               </View>
             ))}
@@ -1438,6 +1375,7 @@ function GarageScreen({ player }) {
    CHALLENGE SCREEN
 ══════════════════════════════════════════════════ */
 function ChallengeScreen({ player, onToggle }) {
+  const [period, setPeriod] = useState("daily");
   const completions = player.completions || [];
   const activeIds = player.activeChallengeIds || [];
   const grouped = { daily: [], weekly: [], monthly: [] };
@@ -1459,7 +1397,7 @@ function ChallengeScreen({ player, onToggle }) {
       style={{ flex: 1, backgroundColor: C.bg }}
       contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
     >
-      <View style={{ alignItems: "center", marginBottom: 20 }}>
+      <View style={{ alignItems: "flex-start", marginBottom: 20 }}>
         <Text
           style={{
             fontSize: 10,
@@ -1471,8 +1409,8 @@ function ChallengeScreen({ player, onToggle }) {
         >
           Défis
         </Text>
-        <Text style={{ fontSize: 22, fontWeight: "900", color: C.text }}>
-          Défis & Récompenses
+        <Text style={{ fontSize: 28, fontWeight: "800", color: C.text }}>
+          Défis & récompenses
         </Text>
         <Text style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
           Active → Scanne → Valide → Gagne
@@ -1492,7 +1430,7 @@ function ChallengeScreen({ player, onToggle }) {
           marginBottom: 24,
         }}
       >
-        <Text style={{ fontSize: 36 }}>🏆</Text>
+        <LineIcon name="challenge" color={C.accent} size={34} />
         <View>
           <Text style={{ fontSize: 11, color: C.muted }}>
             Points bonus cumulés
@@ -1507,7 +1445,10 @@ function ChallengeScreen({ player, onToggle }) {
         </View>
       </View>
 
-      {Object.entries(grouped).map(([freq, list]) => (
+      <View style={{flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 22}}>
+        {[["daily", "Quotidiens"], ["weekly", "Hebdomadaires"], ["monthly", "Mensuels"]].map(([id,label]) => <TouchableOpacity key={id} accessibilityRole="tab" accessibilityState={{selected: period === id}} onPress={() => setPeriod(id)} style={{padding:12,borderRadius:20,borderWidth:1,borderColor:period === id ? C.accent : C.border}}><Text style={{color:period === id ? C.accent : C.muted,fontSize:12,fontWeight:"700"}}>{label}</Text></TouchableOpacity>)}
+      </View>
+      {Object.entries(grouped).filter(([freq]) => freq === period).map(([freq, list]) => (
         <View key={freq} style={{ marginBottom: 24 }}>
           <View
             style={{
@@ -1561,7 +1502,7 @@ function ChallengeScreen({ player, onToggle }) {
                     : activ
                       ? C.accent + "44"
                       : C.border,
-                  opacity: locked ? 0.85 : 1,
+                  opacity: 1,
                 }}
               >
                 <View
@@ -1571,9 +1512,7 @@ function ChallengeScreen({ player, onToggle }) {
                     gap: 12,
                   }}
                 >
-                  <Text style={{ fontSize: 26, width: 34 }}>
-                    {locked ? "✅" : ch.icon}
-                  </Text>
+                  <LineIcon name={locked ? "check" : "challenge"} color={locked ? "#34D399" : C.accent} />
                   <View style={{ flex: 1 }}>
                     <Text
                       style={{
@@ -1609,7 +1548,7 @@ function ChallengeScreen({ player, onToggle }) {
                       </Text>
                       {locked && (
                         <Text style={{ fontSize: 10, color: "#34D399" }}>
-                          🔄 Reset dans {getTimeLeft(ch.freq)}
+                          Renouvelé dans {getTimeLeft(ch.freq)}
                         </Text>
                       )}
                       {!locked && activ && (
@@ -1673,7 +1612,7 @@ function ChallengeScreen({ player, onToggle }) {
                             fontWeight: "700",
                           }}
                         >
-                          Auto 🤖
+                          Auto
                         </Text>
                       </View>
                     )}
@@ -1985,7 +1924,7 @@ function SocialScreen({ player, onUpdatePlayer }) {
       {subTab === "ranking" && (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           <View style={{ alignItems: "center", marginBottom: 16 }}>
-            <Text style={{ fontSize: 22, fontWeight: "900", color: C.text }}>
+            <Text style={{ fontSize: 28, fontWeight: "800", color: C.text }}>
               Classement mondial
             </Text>
             {myRank > 0 && (
@@ -2790,7 +2729,7 @@ function AppInner() {
 
   if (!player || (!DEMO_MODE && accountState !== "connected"))
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: insets.top, paddingBottom: insets.bottom }}>
         <StatusBar
           barStyle="light-content"
           backgroundColor="transparent"
@@ -2850,7 +2789,7 @@ function AppInner() {
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Text style={{ fontSize: 20, marginRight: 8 }}>🏁</Text>
+            
             <Text
               style={{
                 fontSize: 18,
@@ -2882,14 +2821,10 @@ function AppInner() {
               </Text>
             </View>
           </View>
-          <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ fontSize: 10, color: C.muted }}>
-              {player.avatar} {player.name}
-            </Text>
-            <Text style={{ fontSize: 12, fontWeight: "800", color: C.accent }}>
-              ⭐ {score.toLocaleString()}
-            </Text>
-          </View>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Ouvrir mon compte" onPress={() => setTab("account")} style={{flexDirection:"row",alignItems:"center",gap:12,minHeight:44}}>
+            <Text style={{color:C.accent,fontWeight:"700"}}>{score.toLocaleString("fr-FR")} pts</Text>
+            <LineIcon name="account" color={tab === "account" ? C.accent : C.text} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -2900,10 +2835,10 @@ function AppInner() {
           </Text>
         </View>
       )}
-      <TouchableOpacity accessibilityRole="link" accessibilityLabel="Support Gaalster, ouvre le navigateur" onPress={() => Linking.openURL("https://cardrive-native.onrender.com/support").catch(() => Alert.alert("Support", "Impossible d’ouvrir le navigateur."))} style={{padding:12,backgroundColor:C.surface}}><Text style={{color:C.accent,textAlign:"center",fontSize:14}}>Gaalster · Support (navigateur)</Text></TouchableOpacity>
+
       {!!accountError && accountState !== "guest" && (
         <TouchableOpacity
-          onPress={() => setTab("home")}
+          onPress={() => setTab("account")}
           style={{ padding: 10, backgroundColor: C.surface }}
         >
           <Text style={{ color: C.accent, textAlign: "center" }}>
@@ -2924,14 +2859,8 @@ function AppInner() {
       </Modal>
       {/* Screens */}
       <View style={{ flex: 1 }}>
-        {tab === "home" && <View style={{flex:1}}>
-          <View style={{paddingHorizontal:22,paddingTop:16,paddingBottom:12,gap:8}}>
-            <Text accessibilityRole="header" style={{color:"#fff",fontSize:26,fontWeight:"900"}}>{accountState === "connected" ? `Bienvenue, ${player.name}` : "Bienvenue dans CarDrive"}</Text>
-            <Text style={{color:C.muted,fontSize:14,lineHeight:21}}>{accountState === "connected" ? "Ton compte et tes scans, au même endroit." : "Crée ton compte ou connecte-toi ici pour profiter de 5 scans gratuits par jour."}</Text>
-            {(DEMO_MODE || accountState === "connected") && <Btn label="Photographier une voiture" onPress={() => setTab("scan")} />}
-          </View>
-          <ShopScreen onSessionEnded={endSession} onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} key={authMode} accountOnly initialMode={authMode} entitlements={entitlements} onRefresh={refreshAccount} />
-        </View>}
+        {tab === "home" && <HomeScreen player={player} entitlements={entitlements} connected={accountState === "connected" || DEMO_MODE} onScan={() => setTab("scan")} onAccount={() => setTab("account")} onGarage={() => setTab("garage")} renderCard={(car) => <CarCard car={car} size="lg" onPress={() => setTab("garage")} />} />}
+        {tab === "account" && <ShopScreen onSessionEnded={endSession} onDeleted={() => {setPlayer(null);setTab("home");}} key={authMode} accountOnly initialMode={authMode} entitlements={entitlements} onRefresh={refreshAccount} />}
 
         {tab === "scan" && !DEMO_MODE && accountState !== "connected" && (
           <View style={{flex:1,justifyContent:"center",padding:28,backgroundColor:C.bg,gap:18}}>
@@ -2939,8 +2868,8 @@ function AppInner() {
             <Text accessibilityRole="header" style={{color:"#fff",fontSize:32,fontWeight:"900"}}>Chaque voiture a une histoire. Collectionne-la.</Text>
             <Text style={{color:C.muted,fontSize:16,lineHeight:24}}>{accountState === "loading" ? "Connexion à ton compte…" : accountState === "error" ? "Impossible de vérifier ton compte. Vérifie ta connexion et réessaie." : "Crée ton compte gratuit pour identifier les voitures et obtenir 5 scans par jour, renouvelés à minuit (heure de Paris)."}</Text>
             {accountState === "guest" ? <>
-              <Btn label="Créer mon compte gratuit" onPress={() => {setAuthMode("register");setTab("home");}} />
-              <Btn label="J’ai déjà un compte" outline onPress={() => {setAuthMode("login");setTab("home");}} />
+              <Btn label="Créer mon compte gratuit" onPress={() => {setAuthMode("register");setTab("account");}} />
+              <Btn label="J’ai déjà un compte" outline onPress={() => {setAuthMode("login");setTab("account");}} />
               <Text style={{color:C.muted,fontSize:12}}>Aucune carte bancaire nécessaire · Ton garage reste sur cet appareil</Text>
             </> : <Btn label="Réessayer la connexion" onPress={() => refreshAccount().catch(() => {})} />}
           </View>
@@ -2973,7 +2902,7 @@ function AppInner() {
           flexDirection: "row",
           borderTopWidth: 1,
           borderTopColor: C.border,
-          backgroundColor: "#0d0d1e",
+          backgroundColor: C.surface,
           paddingBottom:
             insets.bottom > 0
               ? insets.bottom
@@ -2987,6 +2916,9 @@ function AppInner() {
           return (
             <TouchableOpacity
               key={t.id}
+              accessibilityRole="tab"
+              accessibilityLabel={t.label}
+              accessibilityState={{selected: active}}
               onPress={() => setTab(t.id)}
               style={{
                 flex: 1,
@@ -2997,7 +2929,7 @@ function AppInner() {
               }}
             >
               <View style={{ position: "relative" }}>
-                <Text style={{ fontSize: 20 }}>{t.icon}</Text>
+                <LineIcon name={t.id} color={active ? C.accent : C.muted} />
                 {(t.badge || 0) > 0 && (
                   <View
                     style={{
@@ -3025,7 +2957,7 @@ function AppInner() {
                 style={{
                   fontSize: 9,
                   fontWeight: "700",
-                  color: active ? C.accent : "#3a3a5a",
+                  color: active ? C.accent : C.muted,
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
                   marginTop: 3,

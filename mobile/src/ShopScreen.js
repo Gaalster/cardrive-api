@@ -109,7 +109,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
       <Text style={styles.eyebrow}>
         CARDRIVE TCG {DEMO_MODE ? "· DÉMO" : ""}
       </Text>
-      <Text style={styles.title}>{accountOnly ? "Mon compte" : "Le stand 🛍️"}</Text>
+      <Text style={styles.title}>{accountOnly ? "Mon compte" : "Le stand"}</Text>
       {DEMO_MODE && (
         <Text style={styles.message}>
           Démonstration locale : prix illustratifs, achats fictifs, aucune
@@ -119,7 +119,7 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
       <Text style={styles.description}>
         {checkoutAllowed ? "Recharge tes scans ou découvre le CarDrive Pass." : "Retrouve ton compte et tes scans gratuits du jour."}
       </Text>
-      <View style={styles.card}>
+      {(accountOnly || !connected) && <View style={styles.card}>
         <Text style={styles.heading}>
           {connected ? "Mon compte" : "Ton compte CarDrive"}
         </Text>
@@ -252,12 +252,14 @@ export function ShopScreen({ entitlements, onRefresh, initialMode = "register", 
           </>
         )}
       </View>
+      }
       {!!message && (
         <Text accessibilityRole="alert" style={styles.message}>
           {message}
         </Text>
       )}
-      {busy && <ActivityIndicator color="#FBBF24" />}
+      {busy && <ActivityIndicator color="#F4C95D" />}
+      {accountOnly && <Action label="Contacter le support" secondary onPress={()=>Linking.openURL("https://cardrive-native.onrender.com/support").catch(()=>setMessage("Impossible d’ouvrir le support."))} />}
       <Action label="Confidentialité" secondary onPress={()=>Linking.openURL('https://cardrive.kiki2823.chatgpt.site/confidentialite.html').catch(()=>setMessage('Impossible d’ouvrir la page.'))} />
       {!accountOnly && <>
       {!checkoutAllowed && (
@@ -344,17 +346,17 @@ function Action({ label, onPress, disabled, secondary }) {
         disabled && { opacity: 0.4 },
       ]}
     >
-      <Text style={[styles.buttonText, secondary && { color: "#FBBF24" }]}>
+      <Text style={[styles.buttonText, secondary && { color: "#F4C95D" }]}>
         {label}
       </Text>
     </TouchableOpacity>
   );
 }
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#08080f" },
+  page: { flex: 1, backgroundColor: "#090C10" },
   content: { padding: 20, paddingBottom: 48 },
   eyebrow: {
-    color: "#FBBF24",
+    color: "#F4C95D",
     letterSpacing: 3,
     fontSize: 10,
     fontWeight: "800",
@@ -373,7 +375,7 @@ const styles = StyleSheet.create({
   },
   text: { color: "#f0f0f8", fontSize: 14 },
   balance: {
-    color: "#FBBF24",
+    color: "#F4C95D",
     fontSize: 18,
     marginVertical: 12,
     fontWeight: "700",
@@ -382,8 +384,8 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#29293f",
-    backgroundColor: "#12121e",
+    borderColor: "#303943",
+    backgroundColor: "#151B22",
     marginBottom: 16,
   },
   heading: {
@@ -399,7 +401,7 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   price: {
-    color: "#FBBF24",
+    color: "#F4C95D",
     fontSize: 28,
     fontWeight: "900",
     marginBottom: 12,
@@ -408,20 +410,20 @@ const styles = StyleSheet.create({
     color: "#f0f0f8",
     padding: 14,
     borderRadius: 10,
-    backgroundColor: "#08080f",
+    backgroundColor: "#090C10",
     marginBottom: 10,
   },
   button: {
-    backgroundColor: "#FBBF24",
+    backgroundColor: "#F4C95D",
     borderRadius: 12,
     padding: 14,
     alignItems: "center",
     marginTop: 8,
   },
   secondary: { backgroundColor: "#242019" },
-  buttonText: { color: "#08080f", fontWeight: "800", textAlign: "center" },
+  buttonText: { color: "#090C10", fontWeight: "800", textAlign: "center" },
   message: {
-    color: "#FBBF24",
+    color: "#F4C95D",
     backgroundColor: "#242019",
     padding: 14,
     borderRadius: 12,
