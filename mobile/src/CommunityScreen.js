@@ -1,0 +1,28 @@
+import React,{useEffect,useState} from 'react';
+import {View,Text,TextInput,TouchableOpacity,ScrollView,StyleSheet,ActivityIndicator,Linking,Alert} from 'react-native';
+import {api} from './api';
+export function CommunityScreen({player}) {
+ const [data,setData]=useState(null),[name,setName]=useState(player?.name||''),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[tab,setTab]=useState('leaders'),[query,setQuery]=useState('');
+ async function run(action,target){setBusy(true);setError('');try{setData(await api('/community',action?{action,target,name,consent}:undefined));if(action==='report')setError('Signalement transmis à l’équipe.');}catch(e){setError(e.message);}finally{setBusy(false);}}
+ useEffect(()=>{let live=true;api('/community').then(d=>live&&setData(d)).catch(e=>live&&setError(e.message));return()=>{live=false;};},[]);
+ const button=(label,action,secondary=false)=><TouchableOpacity accessibilityRole="button" disabled={busy} onPress={action} style={[s.button,secondary&&s.secondary,busy&&{opacity:.5}]}><Text style={[s.buttonText,secondary&&{color:'#edc466'}]}>{label}</Text></TouchableOpacity>;
+ const list=(data?.[tab]||[]).filter(p=>p.name.toLowerCase().includes(query.toLowerCase()));
+ return <ScrollView contentContainerStyle={s.page}><Text style={s.eyebrow}>CARDRIVE CLUB</Text><Text style={s.title}>Communauté</Text><Text style={s.body}>Collectionne, retrouve tes amis et progresse ensemble.</Text>
+ {!!error&&<Text accessibilityRole="alert" style={s.message}>{error}</Text>}{busy&&<ActivityIndicator color="#edc466"/>}
+ {!data ? button('Actualiser',()=>run()) : !data.me ? <View style={s.card}><Text style={s.heading}>Rejoins le club</Text><Text style={s.body}>Seuls ton pseudo et le nombre de scans réalisés après ton inscription seront visibles aux membres. Ton email, tes photos et ton garage restent privés.</Text><TextInput accessibilityLabel="Pseudo public" value={name} onChangeText={setName} maxLength={24} style={s.input} placeholder="Ton pseudo" placeholderTextColor="#9295a4"/><Text style={s.body}>Règles : respecte les autres, n’usurpe aucune identité et n’utilise pas de pseudo injurieux ni de données personnelles. Les profils peuvent être signalés et bloqués.</Text>{button(consent?'✓ J’accepte les règles':'Accepter les règles et le profil public',()=>setConsent(!consent),true)}{consent&&button('Rejoindre la communauté',()=>run('join'))}</View> : <>
+ <View style={s.card}><Text style={s.heading}>{data.me.name}</Text><Text style={s.stat}>{data.me.scans} scans validés</Text><Text style={s.body}>Depuis ton inscription au club. Les points de ton garage restent séparés.</Text></View>
+ <View style={s.tabs}>{[['leaders','Classement'],['friends','Amis'],['requests','Demandes'],['blocked','Bloqués']].map(([key,label])=><TouchableOpacity key={key} onPress={()=>setTab(key)} style={s.tab}><Text style={{color:tab===key?'#edc466':'#b8bbca',fontWeight:'700'}}>{label}{key==='requests'&&data.requests.length?` (${data.requests.length})`:''}</Text></TouchableOpacity>)}</View>
+ <TextInput accessibilityLabel="Filtrer les profils affichés" style={s.input} value={query} onChangeText={setQuery} placeholder="Filtrer les profils affichés" placeholderTextColor="#9295a4"/>
+ {tab==='leaders'&&<Text style={s.body}>Les 50 premiers membres, classés par scans validés.</Text>}
+ {!list.length&&<Text style={s.body}>Aucun profil à afficher pour le moment.</Text>}
+ {list.map(p=><View key={p.id} style={s.card}><Text style={s.heading}>{p.name}{p.id===data.me.id?' · toi':''}</Text>{p.scans!==undefined&&<Text style={s.body}>{p.scans} scans</Text>}{p.id!==data.me.id&&<>
+ {tab==='blocked'?button('Débloquer',()=>run('unblock',p.id),true):<>
+ {tab==='requests'?<>{button('Accepter',()=>run('accept',p.id))}{button('Refuser',()=>run('decline',p.id),true)}</>:tab==='friends'||p.relationship==='friend'?button('Retirer des amis',()=>run('remove',p.id),true):p.relationship==='pending'?<Text style={s.body}>Demande envoyée</Text>:button('Ajouter en ami',()=>run('request',p.id),true)}
+ {button('Bloquer',()=>run('block',p.id),true)}{button('Signaler ce pseudo',()=>run('report',p.id),true)}</>}
+ </>}</View>)}
+ {button('Actualiser',()=>run(),true)}{button('Quitter la communauté',()=>Alert.alert('Quitter la communauté ?', 'Ton profil public, tes relations et ton compteur seront supprimés. Ton garage reste sur cet appareil.', [{text:'Annuler',style:'cancel'},{text:'Quitter',style:'destructive',onPress:()=>run('leave')}]),true)}<Text style={s.body}>Quitter supprime ton profil public, tes relations et ton compteur communautaire.</Text>
+ </>}
+ {button('Contacter le support',()=>Linking.openURL('mailto:kevin.deoliveira@praeconseils.com').catch(()=>setError('Écris à kevin.deoliveira@praeconseils.com.')),true)}
+ </ScrollView>;
+}
+const s=StyleSheet.create({page:{padding:22,paddingBottom:40,gap:14},eyebrow:{color:'#edc466',letterSpacing:3,fontSize:12,fontWeight:'700'},title:{color:'#f7f7fa',fontSize:32,fontWeight:'800'},body:{color:'#b8bbca',fontSize:14,lineHeight:21},heading:{color:'#f7f7fa',fontSize:20,fontWeight:'700'},stat:{color:'#edc466',fontSize:25,fontWeight:'700'},card:{backgroundColor:'#13151d',borderColor:'#2d303d',borderWidth:1,borderRadius:20,padding:20,gap:12},button:{backgroundColor:'#edc466',padding:14,borderRadius:12,alignItems:'center'},secondary:{backgroundColor:'#25231c'},buttonText:{color:'#15130c',fontWeight:'700'},input:{backgroundColor:'#1d202b',borderRadius:12,padding:14,color:'#fff'},tabs:{flexDirection:'row',flexWrap:'wrap',gap:8},tab:{paddingVertical:12,paddingHorizontal:8},message:{color:'#edc466',lineHeight:21}});

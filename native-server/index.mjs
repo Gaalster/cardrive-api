@@ -161,6 +161,14 @@ export function createApplication({
       if (req.method === 'POST' && path === '/support/read') return send(200,await privacy.readTicket(body));
       const token = req.headers.authorization?.replace(/^Bearer /, "") || "";
       const id = await store.authenticate(token);
+      if (path === '/community' && ['GET','POST'].includes(req.method)) {
+        if (!store.community) throw fail(503,'Communauté indisponible.');
+        rateLimit(`community:${id}`,60,60000);
+        const action = req.method === 'GET' ? 'state' : body.action;
+        if (!['state','join','leave','request','accept','decline','remove','block','unblock','report'].includes(action)) throw fail(400,'Action invalide.');
+        if (action === 'join' && (body.consent !== true || typeof body.name !== 'string' || !/^[\p{L}\p{N} _-]{3,24}$/u.test(body.name.trim()))) throw fail(400,'Choisis un pseudo de 3 à 24 lettres, chiffres, espaces ou tirets et accepte les règles.');
+        return send(200,await store.community(id,action,{name:typeof body.name==='string'?body.name.trim():'',target:typeof body.target==='string'?body.target.slice(0,64):'',consent:body.consent===true}));
+      }
       if (req.method === 'POST' && path === '/support/admin') return send(200,await privacy.admin(id,body));
       if (req.method === 'POST' && path === '/account/delete') {
         rateLimit(`delete:${id}`,5,900000);

@@ -5,9 +5,9 @@ const scrypt=promisify(scryptCallback);
 
 export function createSupabaseStore({url=process.env.SUPABASE_URL,secret=process.env.SUPABASE_SECRET_KEY,fetcher=fetch}={}) {
  if(!url || !/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(url) || !secret?.startsWith('sb_secret_')) throw Error('Configurer SUPABASE_URL et SUPABASE_SECRET_KEY (clé secrète serveur sb_secret_).');
- async function rpc(operation,payload={}) {
+ async function rpc(operation,payload={},endpoint="cardrive_rpc") {
   let r;
-  try { r=await fetcher(url.replace(/\/$/,'')+'/rest/v1/rpc/cardrive_rpc',{method:'POST',headers:{apikey:secret,'Content-Type':'application/json'},body:JSON.stringify({operation,payload}),signal:AbortSignal.timeout(20000)}); }
+  try { r=await fetcher(url.replace(/\/$/,'')+'/rest/v1/rpc/'+endpoint,{method:'POST',headers:{apikey:secret,'Content-Type':'application/json'},body:JSON.stringify({operation,payload}),signal:AbortSignal.timeout(20000)}); }
   catch {throw fail(503,'Base de données indisponible. Réessaie plus tard.');}
   let data;try{data=await r.json();}catch{throw fail(503,'Réponse de la base illisible.');}
   if(!r.ok){
@@ -29,6 +29,7 @@ export function createSupabaseStore({url=process.env.SUPABASE_URL,secret=process
  }
  const store={
   kind:'supabase',rpc,
+  community:(id,action,payload={})=>rpc(action,{...payload,id},'cardrive_community'),
   health:()=>rpc('health'),close:async()=>{},
   async register(email,password){const salt=randomBytes(16).toString('hex');const hash=(await scrypt(password,salt,64)).toString('hex');return rpc('register',{id:randomUUID(),email,password:`${salt}:${hash}`});},
   login,account:id=>rpc('account',{id}),

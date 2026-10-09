@@ -7,7 +7,7 @@
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env index.mjs",
-    "test": "node --test tests.mjs ads.test.mjs privacy.test.mjs supabase.test.mjs"
+    "test": "node --test tests.mjs ads.test.mjs privacy.test.mjs supabase.test.mjs community.test.mjs"
   },
   "dependencies": {
     "stripe": "22.6.2"
