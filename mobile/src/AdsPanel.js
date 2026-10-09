@@ -4,6 +4,7 @@ import mobileAds, {AdsConsent, BannerAd, BannerAdSize, TestIds, RewardedAd, Rewa
 import {api} from './api';
 
 // Test units remain mandatory until the AdMob account and consent messages are configured.
+const DISABLED = process.env.EXPO_PUBLIC_ADS_DISABLED === "true";
 const TEST = process.env.EXPO_PUBLIC_ADS_LIVE !== 'true';
 const bannerId = TEST ? TestIds.BANNER : process.env.EXPO_PUBLIC_ADMOB_BANNER_ID;
 let initializing;
@@ -23,6 +24,7 @@ export function AdsPanel({reward = false, onRefresh}) {
   const mounted = useRef(true);
   const locked = useRef(false);
   useEffect(() => {
+    if (DISABLED) return;
     mounted.current = true;
     initialize().then(() => {if(mounted.current)setReady(true);}).catch(() => {if(mounted.current)setMessage('Publicités momentanément indisponibles.');});
     return () => {mounted.current = false; cleanup.current();};
@@ -58,6 +60,7 @@ export function AdsPanel({reward = false, onRefresh}) {
       ad.load();
     } catch(e) {locked.current=false;if(mounted.current){setBusy(false);setMessage(e.message);}}
   };
+  if (DISABLED) return null;
   if (!reward) return ready && bannerId ? <View style={{alignItems:'center',paddingVertical:8,backgroundColor:'#101018'}}><Text style={{color:'#92929f',fontSize:10,marginBottom:4}}>{TEST?'PUBLICITÉ DE TEST':'PUBLICITÉ'}</Text><BannerAd unitId={bannerId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} requestOptions={{requestNonPersonalizedAdsOnly:true}} onAdFailedToLoad={()=>setReady(false)} /></View> : null;
   return <View style={{padding:18,borderRadius:18,backgroundColor:'#191923',marginVertical:16,gap:12}}>
     <Text style={{color:'#fff',fontSize:19,fontWeight:'800'}}>Un scan de plus</Text>

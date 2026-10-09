@@ -11,3 +11,14 @@ export async function keepPhoto(uri, base64) {
   await FileSystem.copyAsync({ from: uri, to: destination });
   return destination;
 }
+
+export async function clearLocalPhotos(garage = []) {
+  if (Platform.OS === 'web') return;
+  const directory = `${FileSystem.documentDirectory}${DEMO_MODE ? 'demo-cards' : 'cards'}/`;
+  for (const card of garage) {
+    const uri = card.imageUri;
+    if (typeof uri === 'string' && uri.startsWith(directory) && !uri.slice(directory.length).includes('/')) {
+      await FileSystem.deleteAsync(uri, {idempotent:true});
+    }
+  }
+}

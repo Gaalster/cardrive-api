@@ -1,3 +1,4 @@
+import { HomeScreen, LineIcon } from "./src/PremiumUI";
 import { AdsPanel } from "./src/AdsPanel";
 import { keepPhoto } from "./src/photos";
 import { DEMO_MODE } from "./src/config";
@@ -17,6 +18,7 @@ import {
   ActivityIndicator,
   Image,
   Dimensions,
+  useWindowDimensions,
   StatusBar,
   Platform,
   Modal,
@@ -50,19 +52,8 @@ import {
   totalScore,
   uid,
 } from "./src/game";
-import {
-  db,
-  syncToFirebase,
-  fetchLeaderboard,
-  searchPlayerByName,
-  sendFriendRequest,
-  acceptFriendRequest,
-  declineFriendRequest,
-  removeFriend,
-  fetchPlayerById,
-  loadPlayer,
-  savePlayer,
-} from "./src/playerStore";
+import {loadPlayer, savePlayer} from "./src/playerStore";
+import {CommunityScreen} from "./src/CommunityScreen";
 
 const { width: W } = Dimensions.get("window");
 
@@ -164,7 +155,7 @@ function Btn({
 function CarCard({ car, onPress, size = "sm" }) {
   const r = car.rarity;
   const dup = (car.count || 1) > 1;
-  const imgH = size === "lg" ? 180 : 110;
+  const imgH = size === "lg" ? 220 : 156;
 
   return (
     <TouchableOpacity
@@ -214,41 +205,12 @@ function CarCard({ car, onPress, size = "sm" }) {
           </View>
         )}
       </View>
-      <View style={{ padding: size === "lg" ? 14 : 10 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: 6,
-          }}
-        >
-          <View style={{ flex: 1, marginRight: 6 }}>
-            <Text
-              style={{
-                fontSize: 9,
-                color: C.muted,
-                textTransform: "uppercase",
-                letterSpacing: 0.8,
-              }}
-            >
-              {car.make}
-            </Text>
-            <Text
-              style={{
-                fontSize: size === "lg" ? 17 : 13,
-                fontWeight: "800",
-                color: C.text,
-              }}
-              numberOfLines={1}
-            >
-              {car.model}
-            </Text>
-            <Text style={{ fontSize: 9, color: C.muted }}>{car.year}</Text>
-          </View>
-          <RarityBadge rarity={r} />
-        </View>
-        <Stars n={r.stars} color={r.color} size={size === "lg" ? 14 : 11} />
+      <View style={{ padding: 12, gap: 6 }}>
+        <Text style={{fontSize: 12, color: C.muted}}>{car.make}</Text>
+        <Text style={{fontSize: size === "lg" ? 22 : 16, fontWeight: "800", color: C.text}}>{car.model}</Text>
+        <Text style={{fontSize: 12, color: C.muted}}>{car.year}</Text>
+        <View style={{alignSelf: "flex-start", marginVertical: 4}}><RarityBadge rarity={RARITIES[r.id] || r} /></View>
+        <Stars n={r.stars} color={r.color} size={12} />
         {size === "lg" && car.power_hp > 0 && (
           <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}>
             {car.power_hp > 0 && (
@@ -1237,6 +1199,7 @@ const s2 = StyleSheet.create({
    GARAGE SCREEN
 ══════════════════════════════════════════════════ */
 function GarageScreen({ player }) {
+  const {width} = useWindowDimensions();
   const garage = player.garage || [];
   const [filter, setFilter] = useState("ALL");
   const [sort, setSort] = useState("date");
@@ -1264,19 +1227,20 @@ function GarageScreen({ player }) {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <View style={{ alignItems: "center", marginBottom: 16 }}>
+        <View style={{ alignItems: "flex-start", marginBottom: 20 }}>
           <Text
             style={{
-              fontSize: 10,
-              color: C.accent,
+              fontSize: 30,
+              fontWeight: "800",
+              color: C.text,
               textTransform: "uppercase",
-              letterSpacing: 2,
+              letterSpacing: -0.5,
               marginBottom: 4,
             }}
           >
             Mon Garage
           </Text>
-          <Text style={{ fontSize: 22, fontWeight: "900", color: C.text }}>
+          <Text style={{ fontSize: 15, color: C.muted }}>
             {garage.length} véhicule{garage.length !== 1 ? "s" : ""}
           </Text>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
@@ -1314,7 +1278,7 @@ function GarageScreen({ player }) {
               >
                 <Text
                   style={{
-                    fontSize: 8,
+                    fontSize: 11,
                     color: C.muted,
                     textTransform: "uppercase",
                   }}
@@ -1336,46 +1300,8 @@ function GarageScreen({ player }) {
           </View>
         </View>
 
-        {/* Rarity chips */}
-        <View style={{ flexDirection: "row", gap: 5, marginBottom: 14 }}>
-          {Object.values(RARITIES).map((r) => {
-            const act = filter === r.id;
-            return (
-              <TouchableOpacity
-                key={r.id}
-                onPress={() => setFilter(act ? "ALL" : r.id)}
-                style={{
-                  flex: 1,
-                  alignItems: "center",
-                  paddingVertical: 8,
-                  borderRadius: 10,
-                  backgroundColor: act ? r.color + "22" : "#ffffff06",
-                  borderWidth: 1,
-                  borderColor: act ? r.color + "66" : C.border,
-                }}
-              >
-                <Text style={{ fontSize: 13 }}>{r.emoji}</Text>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "900",
-                    color: act ? r.color : C.text,
-                  }}
-                >
-                  {rc[r.id] || 0}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 7,
-                    color: C.muted,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {r.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+        <View style={{flexDirection:"row",flexWrap:"wrap",gap:8,marginBottom:16}}>
+          {[{id:"ALL",label:"Toutes",color:C.accent}, ...Object.values(RARITIES)].map(r => <TouchableOpacity key={r.id} accessibilityRole="button" accessibilityState={{selected: filter === r.id}} onPress={() => setFilter(r.id)} style={{minHeight:40,paddingHorizontal:12,paddingVertical:10,borderRadius:14,borderWidth:1,borderColor:filter === r.id ? r.color : C.border,backgroundColor:filter === r.id ? r.color+"15" : C.surface}}><Text style={{fontSize:12,color:filter === r.id ? r.color : C.muted,fontWeight:"600"}}>{r.label} {r.id === "ALL" ? garage.length : rc[r.id]}</Text></TouchableOpacity>)}
         </View>
 
         {/* Sort */}
@@ -1422,7 +1348,7 @@ function GarageScreen({ player }) {
         ) : (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {displayed.map((car) => (
-              <View key={car.id} style={{ width: (W - 42) / 2 }}>
+              <View key={car.id} style={{ width: width < 360 ? "100%" : "48.5%" }}>
                 <CarCard car={car} onPress={() => setDetail(car)} />
               </View>
             ))}
@@ -1438,6 +1364,7 @@ function GarageScreen({ player }) {
    CHALLENGE SCREEN
 ══════════════════════════════════════════════════ */
 function ChallengeScreen({ player, onToggle }) {
+  const [period, setPeriod] = useState("daily");
   const completions = player.completions || [];
   const activeIds = player.activeChallengeIds || [];
   const grouped = { daily: [], weekly: [], monthly: [] };
@@ -1459,7 +1386,7 @@ function ChallengeScreen({ player, onToggle }) {
       style={{ flex: 1, backgroundColor: C.bg }}
       contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
     >
-      <View style={{ alignItems: "center", marginBottom: 20 }}>
+      <View style={{ alignItems: "flex-start", marginBottom: 20 }}>
         <Text
           style={{
             fontSize: 10,
@@ -1471,8 +1398,8 @@ function ChallengeScreen({ player, onToggle }) {
         >
           Défis
         </Text>
-        <Text style={{ fontSize: 22, fontWeight: "900", color: C.text }}>
-          Défis & Récompenses
+        <Text style={{ fontSize: 28, fontWeight: "800", color: C.text }}>
+          Défis & récompenses
         </Text>
         <Text style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
           Active → Scanne → Valide → Gagne
@@ -1492,7 +1419,7 @@ function ChallengeScreen({ player, onToggle }) {
           marginBottom: 24,
         }}
       >
-        <Text style={{ fontSize: 36 }}>🏆</Text>
+        <LineIcon name="challenge" color={C.accent} size={34} />
         <View>
           <Text style={{ fontSize: 11, color: C.muted }}>
             Points bonus cumulés
@@ -1507,7 +1434,10 @@ function ChallengeScreen({ player, onToggle }) {
         </View>
       </View>
 
-      {Object.entries(grouped).map(([freq, list]) => (
+      <View style={{flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 22}}>
+        {[["daily", "Quotidiens"], ["weekly", "Hebdomadaires"], ["monthly", "Mensuels"]].map(([id,label]) => <TouchableOpacity key={id} accessibilityRole="tab" accessibilityState={{selected: period === id}} onPress={() => setPeriod(id)} style={{padding:12,borderRadius:20,borderWidth:1,borderColor:period === id ? C.accent : C.border}}><Text style={{color:period === id ? C.accent : C.muted,fontSize:12,fontWeight:"700"}}>{label}</Text></TouchableOpacity>)}
+      </View>
+      {Object.entries(grouped).filter(([freq]) => freq === period).map(([freq, list]) => (
         <View key={freq} style={{ marginBottom: 24 }}>
           <View
             style={{
@@ -1561,7 +1491,7 @@ function ChallengeScreen({ player, onToggle }) {
                     : activ
                       ? C.accent + "44"
                       : C.border,
-                  opacity: locked ? 0.85 : 1,
+                  opacity: 1,
                 }}
               >
                 <View
@@ -1571,9 +1501,7 @@ function ChallengeScreen({ player, onToggle }) {
                     gap: 12,
                   }}
                 >
-                  <Text style={{ fontSize: 26, width: 34 }}>
-                    {locked ? "✅" : ch.icon}
-                  </Text>
+                  <LineIcon name={locked ? "check" : "challenge"} color={locked ? "#34D399" : C.accent} />
                   <View style={{ flex: 1 }}>
                     <Text
                       style={{
@@ -1609,7 +1537,7 @@ function ChallengeScreen({ player, onToggle }) {
                       </Text>
                       {locked && (
                         <Text style={{ fontSize: 10, color: "#34D399" }}>
-                          🔄 Reset dans {getTimeLeft(ch.freq)}
+                          Renouvelé dans {getTimeLeft(ch.freq)}
                         </Text>
                       )}
                       {!locked && activ && (
@@ -1673,7 +1601,7 @@ function ChallengeScreen({ player, onToggle }) {
                             fontWeight: "700",
                           }}
                         >
-                          Auto 🤖
+                          Auto
                         </Text>
                       </View>
                     )}
@@ -1842,599 +1770,6 @@ function SafeAreaViewCompat({ children, style }) {
   );
 }
 
-function SocialScreen({ player, onUpdatePlayer }) {
-  const [subTab, setSubTab] = useState("ranking"); // ranking | friends | requests
-  const [leaders, setLeaders] = useState([]);
-  const [friends, setFriends] = useState([]);
-  const [loadingLB, setLoadingLB] = useState(true);
-  const [search, setSearch] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [searchRes, setSearchRes] = useState([]);
-  const [viewGarage, setViewGarage] = useState(null);
-  const [toast, setToast] = useState(null);
-
-  const showToast = (msg, color = C.accent) => {
-    setToast({ msg, color });
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  // Charge le leaderboard
-  useEffect(() => {
-    fetchLeaderboard().then((data) => {
-      setLeaders(data);
-      setLoadingLB(false);
-    });
-  }, []);
-
-  // Charge les profils des amis
-  useEffect(() => {
-    if (!player?.friends?.length) {
-      setFriends([]);
-      return;
-    }
-    Promise.all(player.friends.map((id) => fetchPlayerById(id))).then((data) =>
-      setFriends(data.filter(Boolean)),
-    );
-  }, [player?.friends]);
-
-  const handleSearch = async () => {
-    if (!search.trim()) return;
-    setSearching(true);
-    const res = await searchPlayerByName(search.trim());
-    setSearchRes(res.filter((p) => p.id !== player.id));
-    setSearching(false);
-  };
-
-  const handleAddFriend = async (target) => {
-    if ((player.friends || []).includes(target.id)) {
-      showToast("Déjà ami !");
-      return;
-    }
-    const ok = await sendFriendRequest(player, target.id);
-    showToast(
-      ok
-        ? `Demande envoyée à ${target.name} !`
-        : "Firebase non configuré — active-le d'abord.",
-    );
-  };
-
-  const handleAccept = async (fromId) => {
-    await acceptFriendRequest(player, fromId);
-    const req = (player.friendRequests || []).find((r) => r.fromId === fromId);
-    const updated = {
-      ...player,
-      friends: [...(player.friends || []), fromId],
-      friendRequests: (player.friendRequests || []).filter(
-        (r) => r.fromId !== fromId,
-      ),
-    };
-    onUpdatePlayer(updated);
-    showToast(`${req?.fromName || "Ami"} ajouté !`, "#34D399");
-  };
-
-  const handleDecline = async (fromId) => {
-    await declineFriendRequest(player, fromId);
-    const updated = {
-      ...player,
-      friendRequests: (player.friendRequests || []).filter(
-        (r) => r.fromId !== fromId,
-      ),
-    };
-    onUpdatePlayer(updated);
-  };
-
-  const handleRemoveFriend = async (friendId, friendName) => {
-    await removeFriend(player.id, friendId);
-    const updated = {
-      ...player,
-      friends: (player.friends || []).filter((i) => i !== friendId),
-    };
-    onUpdatePlayer(updated);
-    showToast(`${friendName} retiré de tes amis`, "#9CA3AF");
-  };
-
-  const friendRequests = player?.friendRequests || [];
-  const myRank = leaders.findIndex((l) => l.id === player.id) + 1;
-
-  const SUBTABS = [
-    { id: "ranking", label: "🏆 Classement" },
-    { id: "friends", label: `👥 Amis (${(player?.friends || []).length})` },
-    {
-      id: "requests",
-      label: `📩 Demandes${friendRequests.length > 0 ? ` (${friendRequests.length})` : ""}`,
-    },
-  ];
-
-  return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      {/* Sub-tabs */}
-      <View
-        style={{
-          flexDirection: "row",
-          backgroundColor: C.surface,
-          borderBottomWidth: 1,
-          borderBottomColor: C.border,
-        }}
-      >
-        {SUBTABS.map((t) => (
-          <TouchableOpacity
-            key={t.id}
-            onPress={() => setSubTab(t.id)}
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              alignItems: "center",
-              borderBottomWidth: 2,
-              borderBottomColor: subTab === t.id ? C.accent : "transparent",
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: "700",
-                color: subTab === t.id ? C.accent : C.muted,
-              }}
-            >
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* ── CLASSEMENT ── */}
-      {subTab === "ranking" && (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-          <View style={{ alignItems: "center", marginBottom: 16 }}>
-            <Text style={{ fontSize: 22, fontWeight: "900", color: C.text }}>
-              Classement mondial
-            </Text>
-            {myRank > 0 && (
-              <Text style={{ fontSize: 13, color: C.accent, marginTop: 4 }}>
-                Ta position : #{myRank}
-              </Text>
-            )}
-            {!db && (
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: "#F97316",
-                  marginTop: 4,
-                  textAlign: "center",
-                }}
-              >
-                ⚠️ Firebase non configuré — leaderboard non disponible
-              </Text>
-            )}
-          </View>
-
-          {loadingLB && (
-            <ActivityIndicator color={C.accent} style={{ marginTop: 20 }} />
-          )}
-
-          {leaders.map((p, i) => {
-            const isMe = p.id === player.id;
-            const medals = ["🥇", "🥈", "🥉"];
-            return (
-              <TouchableOpacity
-                key={p.id}
-                onPress={() => setViewGarage(p)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  padding: 14,
-                  marginBottom: 8,
-                  borderRadius: 16,
-                  backgroundColor: isMe ? C.accent + "18" : C.surface,
-                  borderWidth: 1,
-                  borderColor: isMe ? C.accent + "55" : C.border,
-                }}
-              >
-                <Text style={{ fontSize: 22, width: 36, textAlign: "center" }}>
-                  {medals[i] || `#${i + 1}`}
-                </Text>
-                <Text style={{ fontSize: 22, marginHorizontal: 8 }}>
-                  {p.avatar}
-                </Text>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        fontWeight: "800",
-                        color: isMe ? C.accent : C.text,
-                      }}
-                    >
-                      {p.name}
-                    </Text>
-                    {p.isPremium && (
-                      <Text
-                        style={{
-                          fontSize: 9,
-                          backgroundColor: C.accent,
-                          color: "#000",
-                          paddingHorizontal: 5,
-                          paddingVertical: 1,
-                          borderRadius: 8,
-                          marginLeft: 6,
-                          fontWeight: "900",
-                        }}
-                      >
-                        PRO
-                      </Text>
-                    )}
-                    {isMe && (
-                      <Text
-                        style={{ fontSize: 10, color: C.muted, marginLeft: 6 }}
-                      >
-                        (moi)
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={{ fontSize: 10, color: C.muted }}>
-                    {p.garageCount} voitures
-                  </Text>
-                </View>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "900",
-                    color: isMe ? C.accent : "#FBBF24",
-                  }}
-                >
-                  ⭐{p.score?.toLocaleString()}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
-
-      {/* ── AMIS ── */}
-      {subTab === "friends" && (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-          {/* Recherche */}
-          <View
-            style={{
-              backgroundColor: C.surface,
-              borderRadius: 16,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: C.border,
-              marginBottom: 20,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 12,
-                color: C.muted,
-                marginBottom: 10,
-                textTransform: "uppercase",
-                letterSpacing: 1,
-                fontWeight: "700",
-              }}
-            >
-              Chercher un joueur
-            </Text>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <TextInput
-                value={search}
-                onChangeText={setSearch}
-                placeholder="Pseudo exact…"
-                placeholderTextColor={C.muted}
-                onSubmitEditing={handleSearch}
-                style={{
-                  flex: 1,
-                  backgroundColor: C.bg,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: C.border,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  fontSize: 14,
-                  color: C.text,
-                }}
-              />
-              <TouchableOpacity
-                onPress={handleSearch}
-                style={{
-                  backgroundColor: C.accent + "22",
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  justifyContent: "center",
-                  borderWidth: 1,
-                  borderColor: C.accent + "55",
-                }}
-              >
-                {searching ? (
-                  <ActivityIndicator size="small" color={C.accent} />
-                ) : (
-                  <Text style={{ color: C.accent, fontWeight: "800" }}>🔍</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-            {searchRes.map((p) => (
-              <View
-                key={p.id}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  paddingVertical: 12,
-                  borderTopWidth: 1,
-                  borderTopColor: C.border,
-                  marginTop: 8,
-                }}
-              >
-                <Text style={{ fontSize: 24, marginRight: 10 }}>
-                  {p.avatar}
-                </Text>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{ fontSize: 14, fontWeight: "700", color: C.text }}
-                  >
-                    {p.name}
-                  </Text>
-                  <Text style={{ fontSize: 11, color: C.muted }}>
-                    ⭐{p.score?.toLocaleString()} · {p.garageCount} voitures
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => handleAddFriend(p)}
-                  style={{
-                    backgroundColor: (player.friends || []).includes(p.id)
-                      ? C.surface
-                      : C.accent + "22",
-                    borderRadius: 10,
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    borderWidth: 1,
-                    borderColor: (player.friends || []).includes(p.id)
-                      ? C.border
-                      : C.accent + "55",
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      fontWeight: "800",
-                      color: (player.friends || []).includes(p.id)
-                        ? C.muted
-                        : C.accent,
-                    }}
-                  >
-                    {(player.friends || []).includes(p.id)
-                      ? "✓ Ami"
-                      : "+ Ajouter"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-
-          {/* Liste des amis */}
-          <Text
-            style={{
-              fontSize: 11,
-              color: C.muted,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-              marginBottom: 12,
-              fontWeight: "700",
-            }}
-          >
-            Mes amis ({friends.length})
-          </Text>
-          {friends.length === 0 && (
-            <View
-              style={{
-                alignItems: "center",
-                paddingVertical: 32,
-                backgroundColor: C.surface,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: C.border,
-              }}
-            >
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>👥</Text>
-              <Text style={{ color: C.muted, fontSize: 13 }}>
-                Pas encore d'amis
-              </Text>
-              <Text style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>
-                Cherche un joueur par son pseudo
-              </Text>
-            </View>
-          )}
-          {friends.map((f) => (
-            <View
-              key={f.id}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                padding: 14,
-                marginBottom: 8,
-                borderRadius: 16,
-                backgroundColor: C.surface,
-                borderWidth: 1,
-                borderColor: C.border,
-              }}
-            >
-              <Text style={{ fontSize: 24, marginRight: 10 }}>{f.avatar}</Text>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{ fontSize: 14, fontWeight: "700", color: C.text }}
-                >
-                  {f.name}
-                </Text>
-                <Text style={{ fontSize: 11, color: C.muted }}>
-                  ⭐{f.score?.toLocaleString()} · {f.garageCount} voitures
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setViewGarage(f)}
-                style={{
-                  marginRight: 8,
-                  backgroundColor: C.accent + "15",
-                  borderRadius: 10,
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderWidth: 1,
-                  borderColor: C.accent + "33",
-                }}
-              >
-                <Text
-                  style={{ fontSize: 11, color: C.accent, fontWeight: "700" }}
-                >
-                  Garage
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleRemoveFriend(f.id, f.name)}
-              >
-                <Text style={{ color: "#EF4444", fontSize: 18 }}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      )}
-
-      {/* ── DEMANDES ── */}
-      {subTab === "requests" && (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-          <Text
-            style={{
-              fontSize: 11,
-              color: C.muted,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-              marginBottom: 12,
-              fontWeight: "700",
-            }}
-          >
-            Demandes reçues ({friendRequests.length})
-          </Text>
-          {friendRequests.length === 0 && (
-            <View style={{ alignItems: "center", paddingVertical: 40 }}>
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>📩</Text>
-              <Text style={{ color: C.muted }}>Aucune demande en attente</Text>
-            </View>
-          )}
-          {friendRequests.map((req) => (
-            <View
-              key={req.fromId}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                padding: 14,
-                marginBottom: 8,
-                borderRadius: 16,
-                backgroundColor: C.surface,
-                borderWidth: 1,
-                borderColor: C.accent + "33",
-              }}
-            >
-              <Text style={{ fontSize: 28, marginRight: 10 }}>
-                {req.fromAvatar}
-              </Text>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{ fontSize: 14, fontWeight: "700", color: C.text }}
-                >
-                  {req.fromName}
-                </Text>
-                <Text style={{ fontSize: 10, color: C.muted }}>
-                  veut être ton ami
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleAccept(req.fromId)}
-                style={{
-                  backgroundColor: "#34D39922",
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderWidth: 1,
-                  borderColor: "#34D39955",
-                  marginRight: 8,
-                }}
-              >
-                <Text
-                  style={{ color: "#34D399", fontWeight: "800", fontSize: 12 }}
-                >
-                  ✓ Accepter
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleDecline(req.fromId)}
-                style={{
-                  backgroundColor: "#EF444415",
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderWidth: 1,
-                  borderColor: "#EF444433",
-                }}
-              >
-                <Text
-                  style={{ color: "#EF4444", fontWeight: "800", fontSize: 12 }}
-                >
-                  ✕
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      )}
-
-      {/* Garage preview modal */}
-      {viewGarage && (
-        <GaragePreviewModal
-          friend={viewGarage}
-          onClose={() => setViewGarage(null)}
-        />
-      )}
-
-      {/* Toast */}
-      {toast && (
-        <View
-          style={{
-            position: "absolute",
-            bottom: 20,
-            left: 16,
-            right: 16,
-            backgroundColor: C.card,
-            borderRadius: 14,
-            padding: 14,
-            borderWidth: 1,
-            borderColor: toast.color + "66",
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: toast.color, fontWeight: "700", fontSize: 13 }}>
-            {toast.msg}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-/* ══════════════════════════════════════════════════
-   ONBOARDING
-══════════════════════════════════════════════════ */
-const AVATARS = [
-  "🏎️",
-  "🚀",
-  "🦁",
-  "🐺",
-  "🦊",
-  "🐉",
-  "⚡",
-  "💀",
-  "🔥",
-  "🌙",
-  "🌊",
-  "🦅",
-];
-
 function OnboardingScreen({ onDone }) {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("🏎️");
@@ -2600,42 +1935,60 @@ function AppInner() {
   const [accountError, setAccountError] = useState("");
   const [accountState, setAccountState] = useState("loading");
   const [authMode, setAuthMode] = useState("register");
+  const accountRef = useRef(null);
+  const refreshVersion = useRef(0);
   const playerRef = useRef(null);
   playerRef.current = player;
 
   const applyEntitlements = useCallback((value) => {
-    setEntitlements(value);
+    setEntitlements({...value, accountId: value.accountId || accountRef.current});
     setFuel(value.remaining);
   }, []);
 
+  const endSession = useCallback(() => {
+    refreshVersion.current++;
+    accountRef.current = null;
+    playerRef.current = null;
+    setPlayer(null);
+    setTab('home'); setRechargeOpen(false); setPopup(null);
+    applyEntitlements({isPremium:false,remaining:0,credits:0});
+    setAccountState('guest');
+  }, [applyEntitlements]);
+
   const refreshAccount = useCallback(async () => {
+    const version = ++refreshVersion.current;
     try {
-      const value = await api("/me");
+      const value = await api('/me');
+      if (version !== refreshVersion.current) return;
+      const owner = DEMO_MODE ? 'demo' : value.accountId;
+      if (!owner) throw Error('Mets à jour le serveur pour vérifier ton compte.');
+      if (accountRef.current !== owner) {
+        accountRef.current = null;
+        playerRef.current = null; setPlayer(null);
+        setAccountState('loading');
+        const saved = await loadPlayer(owner);
+        if (version !== refreshVersion.current) return;
+        accountRef.current = owner;
+        playerRef.current = saved;
+        setPlayer(saved ? {...saved,isPremium:false} : null);
+        setTab('home'); setRechargeOpen(false); setPopup(null);
+      }
       applyEntitlements(value);
-      setAccountError("");
-      setAccountState("connected");
+      setAccountError(''); setAccountState('connected');
       return value;
     } catch (error) {
-      applyEntitlements({ isPremium: false, remaining: 0, credits: 0 });
-      setAccountState(error.status === 401 ? "guest" : "error");
+      if (version !== refreshVersion.current) return;
+      endSession();
+      setAccountState(error.status === 401 ? 'guest' : 'error');
       setAccountError(error.message);
       throw error;
     }
-  }, [applyEntitlements]);
+  }, [applyEntitlements, endSession]);
 
   useEffect(() => {
     let live = true;
-    loadPlayer()
-      .then((saved) => {
-        if (live && saved) setPlayer({ ...saved, isPremium: false });
-      })
-      .finally(() => {
-        if (live) setLoading(false);
-      });
-    refreshAccount().catch(() => {});
-    return () => {
-      live = false;
-    };
+    refreshAccount().catch(() => {}).finally(() => {if (live) setLoading(false);});
+    return () => {live = false; refreshVersion.current++;};
   }, [refreshAccount]);
 
   useEffect(() => {
@@ -2651,38 +2004,17 @@ function AppInner() {
     };
   }, [refreshAccount]);
 
-  useEffect(() => {
-    if (!player?.id || !db) return;
-    let live = true;
-    const poll = async () => {
-      const remote = await fetchPlayerById(player.id);
-      const current = playerRef.current;
-      if (!live || !remote || current?.id !== player.id) return;
-      const updated = {
-        ...current,
-        friendRequests: remote.friendRequests || [],
-        friends: remote.friends || [],
-      };
-      setPlayer(updated);
-      await savePlayer(updated);
-    };
-    poll();
-    const timer = setInterval(poll, 30000);
-    return () => {
-      live = false;
-      clearInterval(timer);
-    };
-  }, [player?.id]);
-
   const persist = async (updated) => {
+    if (!accountRef.current || updated.accountId !== accountRef.current) return false;
+    playerRef.current = updated;
     setPlayer(updated);
     await savePlayer(updated);
-    syncToFirebase(updated);
   };
 
   const createPlayer = async ({ name, avatar }) => {
     await persist({
       id: uid(),
+      accountId: accountRef.current,
       name,
       avatar,
       garage: [],
@@ -2692,7 +2024,8 @@ function AppInner() {
   };
 
   const addCar = async (car) => {
-    if (!player) return;
+    if (!player || player.accountId !== accountRef.current) return;
+    const owner = accountRef.current;
     const dup = player.garage.find(
       (c) => c.make === car.make && c.model === car.model,
     );
@@ -2728,7 +2061,8 @@ function AppInner() {
       garage: newGarage,
       completions: newCompletions,
     });
-    if (completed.length > 0) setTimeout(() => setPopup(completed[0]), 500);
+    if (owner !== accountRef.current) return;
+    if (completed.length > 0) setTimeout(() => {if (owner === accountRef.current) setPopup(completed[0]);}, 500);
     setTab("garage");
   };
 
@@ -2765,16 +2099,16 @@ function AppInner() {
       </View>
     );
 
-  if (!player)
+  if (!player || (!DEMO_MODE && accountState !== "connected"))
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: insets.top, paddingBottom: insets.bottom }}>
         <StatusBar
           barStyle="light-content"
           backgroundColor="transparent"
           translucent
         />
         {!DEMO_MODE && accountState !== "connected" ? (
-          <ShopScreen accountOnly initialMode="register" entitlements={entitlements} onRefresh={refreshAccount} />
+          <ShopScreen onSessionEnded={endSession} onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} accountOnly initialMode="register" entitlements={entitlements} onRefresh={refreshAccount} />
         ) : <OnboardingScreen onDone={createPlayer} />}
       </View>
     );
@@ -2827,7 +2161,7 @@ function AppInner() {
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Text style={{ fontSize: 20, marginRight: 8 }}>🏁</Text>
+            
             <Text
               style={{
                 fontSize: 18,
@@ -2859,14 +2193,10 @@ function AppInner() {
               </Text>
             </View>
           </View>
-          <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ fontSize: 10, color: C.muted }}>
-              {player.avatar} {player.name}
-            </Text>
-            <Text style={{ fontSize: 12, fontWeight: "800", color: C.accent }}>
-              ⭐ {score.toLocaleString()}
-            </Text>
-          </View>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Ouvrir mon compte" onPress={() => setTab("account")} style={{flexDirection:"row",alignItems:"center",gap:12,minHeight:44}}>
+            <Text style={{color:C.accent,fontWeight:"700"}}>{score.toLocaleString("fr-FR")} pts</Text>
+            <LineIcon name="account" color={tab === "account" ? C.accent : C.text} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -2877,10 +2207,10 @@ function AppInner() {
           </Text>
         </View>
       )}
-      <TouchableOpacity accessibilityRole="link" accessibilityLabel="Support Gaalster, ouvre le navigateur" onPress={() => Linking.openURL("https://cardrive-tcg-demo.kiki2823.chatgpt.site/support").catch(() => Alert.alert("Support", "Impossible d’ouvrir le navigateur."))} style={{padding:12,backgroundColor:C.surface}}><Text style={{color:C.accent,textAlign:"center",fontSize:14}}>Gaalster · Support (navigateur)</Text></TouchableOpacity>
+
       {!!accountError && accountState !== "guest" && (
         <TouchableOpacity
-          onPress={() => setTab("home")}
+          onPress={() => setTab("account")}
           style={{ padding: 10, backgroundColor: C.surface }}
         >
           <Text style={{ color: C.accent, textAlign: "center" }}>
@@ -2901,14 +2231,8 @@ function AppInner() {
       </Modal>
       {/* Screens */}
       <View style={{ flex: 1 }}>
-        {tab === "home" && <View style={{flex:1}}>
-          <View style={{paddingHorizontal:22,paddingTop:16,paddingBottom:12,gap:8}}>
-            <Text accessibilityRole="header" style={{color:"#fff",fontSize:26,fontWeight:"900"}}>{accountState === "connected" ? `Bienvenue, ${player.name}` : "Bienvenue dans CarDrive"}</Text>
-            <Text style={{color:C.muted,fontSize:14,lineHeight:21}}>{accountState === "connected" ? "Ton compte et tes scans, au même endroit." : "Crée ton compte ou connecte-toi ici pour profiter de 5 scans gratuits par jour."}</Text>
-            {(DEMO_MODE || accountState === "connected") && <Btn label="Photographier une voiture" onPress={() => setTab("scan")} />}
-          </View>
-          <ShopScreen key={authMode} accountOnly initialMode={authMode} entitlements={entitlements} onRefresh={refreshAccount} />
-        </View>}
+        {tab === "home" && <HomeScreen player={player} entitlements={entitlements} connected={accountState === "connected" || DEMO_MODE} onScan={() => setTab("scan")} onAccount={() => setTab("account")} onGarage={() => setTab("garage")} renderCard={(car) => <CarCard car={car} size="lg" onPress={() => setTab("garage")} />} />}
+        {tab === "account" && <ShopScreen onSessionEnded={endSession} onDeleted={() => {setPlayer(null);setTab("home");}} key={authMode} accountOnly initialMode={authMode} entitlements={entitlements} onRefresh={refreshAccount} />}
 
         {tab === "scan" && !DEMO_MODE && accountState !== "connected" && (
           <View style={{flex:1,justifyContent:"center",padding:28,backgroundColor:C.bg,gap:18}}>
@@ -2916,8 +2240,8 @@ function AppInner() {
             <Text accessibilityRole="header" style={{color:"#fff",fontSize:32,fontWeight:"900"}}>Chaque voiture a une histoire. Collectionne-la.</Text>
             <Text style={{color:C.muted,fontSize:16,lineHeight:24}}>{accountState === "loading" ? "Connexion à ton compte…" : accountState === "error" ? "Impossible de vérifier ton compte. Vérifie ta connexion et réessaie." : "Crée ton compte gratuit pour identifier les voitures et obtenir 5 scans par jour, renouvelés à minuit (heure de Paris)."}</Text>
             {accountState === "guest" ? <>
-              <Btn label="Créer mon compte gratuit" onPress={() => {setAuthMode("register");setTab("home");}} />
-              <Btn label="J’ai déjà un compte" outline onPress={() => {setAuthMode("login");setTab("home");}} />
+              <Btn label="Créer mon compte gratuit" onPress={() => {setAuthMode("register");setTab("account");}} />
+              <Btn label="J’ai déjà un compte" outline onPress={() => {setAuthMode("login");setTab("account");}} />
               <Text style={{color:C.muted,fontSize:12}}>Aucune carte bancaire nécessaire · Ton garage reste sur cet appareil</Text>
             </> : <Btn label="Réessayer la connexion" onPress={() => refreshAccount().catch(() => {})} />}
           </View>
@@ -2932,14 +2256,14 @@ function AppInner() {
           />
         )}
         {tab === "shop" && (
-          <ShopScreen initialMode={authMode} onAuthenticated={() => setTab("scan")} entitlements={entitlements} onRefresh={refreshAccount} />
+          <ShopScreen onSessionEnded={endSession} onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}} initialMode={authMode} onAuthenticated={() => setTab("scan")} entitlements={entitlements} onRefresh={refreshAccount} />
         )}
         {tab === "garage" && <GarageScreen player={player} />}
         {tab === "challenge" && (
           <ChallengeScreen player={player} onToggle={() => {}} />
         )}
         {tab === "social" && (
-          <SocialScreen player={player} onUpdatePlayer={persist} />
+          <CommunityScreen key={player?.accountId} player={player} />
         )}
       </View>
 
@@ -2950,7 +2274,7 @@ function AppInner() {
           flexDirection: "row",
           borderTopWidth: 1,
           borderTopColor: C.border,
-          backgroundColor: "#0d0d1e",
+          backgroundColor: C.surface,
           paddingBottom:
             insets.bottom > 0
               ? insets.bottom
@@ -2964,6 +2288,9 @@ function AppInner() {
           return (
             <TouchableOpacity
               key={t.id}
+              accessibilityRole="tab"
+              accessibilityLabel={t.label}
+              accessibilityState={{selected: active}}
               onPress={() => setTab(t.id)}
               style={{
                 flex: 1,
@@ -2974,7 +2301,7 @@ function AppInner() {
               }}
             >
               <View style={{ position: "relative" }}>
-                <Text style={{ fontSize: 20 }}>{t.icon}</Text>
+                <LineIcon name={t.id} color={active ? C.accent : C.muted} />
                 {(t.badge || 0) > 0 && (
                   <View
                     style={{
@@ -3002,7 +2329,7 @@ function AppInner() {
                 style={{
                   fontSize: 9,
                   fontWeight: "700",
-                  color: active ? C.accent : "#3a3a5a",
+                  color: active ? C.accent : C.muted,
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
                   marginTop: 3,
@@ -3029,7 +2356,7 @@ function AppInner() {
         >
           <SafeAreaViewCompat style={{ flex: 1, backgroundColor: C.bg }}>
             <Btn label="Fermer la boutique" onPress={() => setPremium(false)} />
-            <ShopScreen
+            <ShopScreen onSessionEnded={endSession} onDeleted={() => {setPlayer(null); setTab("home"); setRechargeOpen(false);}}
               entitlements={entitlements}
               onRefresh={refreshAccount}
             />
